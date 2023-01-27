@@ -186,7 +186,8 @@ def corroborar_cedula(message):
         #     #r= requests.post(url)
         # requests.post(url)
         
-        cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+        #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+        cliente = requests.get(f"https://provbotwebapp.onrender.com:5000/cli/clientes/{cedula}") #funciona
         cli = cliente.json()
         existe = cli['exists']
         
@@ -435,7 +436,8 @@ def guardar_datos_usuario(message):
     clienteNuevo = usuarios[message.chat.id]
     print(clienteNuevo)
     """guarda datos del usuario en la BD."""
-    r= requests.post("http://localhost:5000/cli/clientes",
+    #r= requests.post("http://localhost:5000/cli/clientes",
+    r= requests.post("https://provbotwebapp.onrender.com:5000/cli/clientes",
                      data=json.dumps(clienteNuevo),
                      headers={"Content-Type": "application/json"})
     print(r.text)
@@ -759,8 +761,8 @@ if __name__ == '__main__':
     bot.set_webhook(url="https://provbotwebapp.onrender.com")
     # #arrancamos el servidor:
     # #web_server.debug=True
-    # web_server.run("0.0.0.0",port=5000)
-    web_server.run()
+    web_server.run("0.0.0.0",port=5000)
+    #web_server.run()
     
     #web_server.run()
     
