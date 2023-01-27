@@ -762,6 +762,8 @@ if __name__ == '__main__':
     # web_server.run("0.0.0.0",port=5000)
     web_server.run()
     
+    #web_server.run()
+    
     # #bucle infinito en el que se comprueba si hay nuevos mensajes:
     # #bot.infinity_polling()
     
