@@ -752,11 +752,11 @@ if __name__ == '__main__':
     # ngrok_url= ngrok_tunel.public_url
     # print("URL_NGROK:",ngrok_url)
     # #eliminamos el webhook
-    # bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
+    bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
     # #pequeña pausa
-    # time.sleep(1)
+    time.sleep(1)
     # #definimos el webhook
-    # bot.set_webhook(url=ngrok_url)
+    bot.set_webhook(url="https://provbotwebapp.onrender.com")
     # #arrancamos el servidor:
     # #web_server.debug=True
     # web_server.run("0.0.0.0",port=5000)
