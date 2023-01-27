@@ -3,14 +3,23 @@ import telebot # para manejar la api de telegram
 from telebot.types import ReplyKeyboardMarkup #para crear botones
 from telebot.types import ForceReply #para citar un mensaje
 from telebot.types import ReplyKeyboardRemove # para eliminar botones
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton #para los botones para abrir la webapp
 from flask import Flask, request, Blueprint #para crear el servidor web
+import datetime
 from datetime import datetime
 import time
 import requests
-from pyngrok import ngrok,conf # para crear el tunel entre el serv web local y el otro
+import json
+#from pyngrok import ngrok,conf # para crear el tunel entre el serv web local y el otro
 
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from controladores.Producto import mainP
+from controladores.Orden import mainO
+from controladores.Pedido import mainPe
+from controladores.Cliente import mainC #, get_cliente, get_clientes
+from controladores.Peticiones import mainPet #, recibePedido
+#from modelos.ModeloCliente import Cliente, format_cliente
 
 #esto neh por ahora:
 #from controladores.Producto import mainP
@@ -27,8 +36,47 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 web_server= Flask(__name__)
 
 #esto es mio:
+web_server.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:root123456@postgresdb.cadpgx7qqz5d.us-east-1.rds.amazonaws.com/postgres"
+web_server.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+db=SQLAlchemy(web_server)
+CORS(web_server)
+#esto es mio#
+
+
+# #aber si sirve esta mamada:
+# async def get_cliente2(identificacion):
+#     cliente = Cliente.query.filter_by(identificacion=identificacion).one()
+#     formatted_cliente = format_cliente(cliente)
+#     return {formatted_cliente}
+
+# def validar_cedula(cedula):
+#     ced = cedula
+#     if get_cliente(str(ced)):
+#         return True
+#     else:
+#         return False
+
+
 
 #esto es mio#
+
+
+#markup para llamar la webapp
+def gen_markup():
+    #markup = quick_markup({"inline_keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]})
+    
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    
+    #markup.add(InlineKeyboardButton("Yes", callback_data="cb_yes"),
+    boton=InlineKeyboardButton(text= "realizar pedido",web_app="https://snazzy-tartufo-5f17da.netlify.app")
+    markup.add(boton)
+    #markup.add(InlineKeyboardButton("Realizar pedido", web_app = "url":"https://snazzy-tartufo-5f17da.netlify.app"))
+    #text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"
+                               #InlineKeyboardButton("No", callback_data="cb_no"))
+    return markup
+
+
 
 #gestiona las peticiones POST enviadas al servidor web
 @web_server.route('/', methods=['POST'])
@@ -96,9 +144,7 @@ def realizar_pedido(message):
                                     input_field_placeholder="Pulsa un boton",
                                     resize_keyboard=True)
         markup.add("Realizar pedido","Salir")
-        #preguntamos por la accion
-        #msg = bot.send_message(message.chat.id,reply_markup=markup)
-        #bot.register_next_step_handler(msg,preguntar_primerNombre)
+       
         #preguntamos por la accion
         msg = bot.send_message(message.chat.id,"link de youtube con video explicativo",reply_markup=markup)
         #msg = bot.send_message(message.chat.id,reply_markup=markup)
@@ -117,8 +163,8 @@ def realizar_pedido(message):
     #sino se procede a preguntarle todos los datos. 
     
 def corroborar_cedula(message):
-    print("egg",message)
-    if not message.text.isdigit():
+    #print("egg",message)
+    if not message.text.isdecimal():
         #informamos error y volvemos a preguntar
         # markup = ForceReply()  # para responder citado
         #markup = ReplyKeyboardRemove()
@@ -129,21 +175,290 @@ def corroborar_cedula(message):
     else:
         #toca verificar aca adentro que el usuario este en la bd, si esta
         #se procede a hacer pedido, sino se piden datos al usuario
+        #aberlo = await async get_cliente2(str(1144094441))
         
-        """pregunta primer nombre del usuario."""
-        markup = ReplyKeyboardRemove()
-        msg = bot.send_message(message.chat.id, "como es tu primer nombre?",reply_markup=markup)
-        bot.register_next_step_handler(msg,preguntar_primerNombre)
-        #bot.register_next_step_handler(msg,preguntar_primerNombre)
-
-def preguntar_primerNombre(message):
-    """pregunta primer nombre del usuario."""
-    nombre = message.text
-    print("WEEE:",nombre)
-    #markup = ForceReply()  # para responder citado
-    #msg = bot.send_message(message.chat.id,"Cual es su primer nombre? (ej: Juan)")#, reply_markup=markup)
-    #bot.register_next_step_handler(msg,preguntar_segundoNombre)
+        cedula= message.text
+        # chatid= message.chat.id
+        bot.send_message(message.chat.id, "Validando informacion...")
+        # url = f'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk/sendMessage?chat_id={chatid}&text=Validando informacion...'
+        #     #payload = {'chat_id':chat_id,'text':text}
     
+        #     #r= requests.post(url)
+        # requests.post(url)
+        
+        cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+        cli = cliente.json()
+        existe = cli['exists']
+        
+        print("existe o nel:",existe)
+        
+        if existe=="True":
+            nombre = cli['event']['nombre1']
+            nombre = nombre.lower()
+            chatId = message.chat.id   #2089210179
+            print("truesito pa")
+            
+            
+            
+            
+            #hasta aqui fino
+            linkBot = 'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk'
+            markupWebApp = 'reply_markup={"inline_keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]}'
+            
+            requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=Hello User&{markupWebApp}')
+            
+            #hasta aqui fino
+            
+            #bot.send_message(message.chat.id, f"hola {nombre}, que vas a pedir el dia de hoy?",reply_markup=gen_markup())
+            #bot.register_next_step_handler(msg,recibe_pedido)
+        
+        else:
+            print("im in")
+            """almacena la nueva cedula y pregunta nombres del usuario."""
+            usuarios[message.chat.id]={}
+            usuarios[message.chat.id]["identificacion"]=message.text
+            #markup = ReplyKeyboardRemove()
+            bot.send_message(message.chat.id, "No te encuentras registado en nuestra base de datos, por favor ingresa los siguientes datos personales:")
+            msg = bot.send_message(message.chat.id, "Nombre completo (ej: Juan David):")#,reply_markup=markup)
+            #bot.register_next_step_handler(msg,preguntar_primerNombre)
+            
+            bot.register_next_step_handler(msg,preguntar_primer_nombre)
+        
+            
+        #nombre = cli['event']['nombre1']
+        
+        #aberlo = get_cliente(1144094441)
+        
+        #tempc= ced['event']['nombre1']
+        
+        #aberlo = get_clientes()
+        
+        #print("cliente",cli)
+        #print("existe o nel:",existe)
+        #print("nombre cliente:",nombre)
+        
+        #print("noj", json.dumps(tempc))
+        
+        #aber=validar_cedula(str(message.text))
+        #print("ABER:",aber)
+        #print("message texto:",message.text)
+        
+        # if (validar_cedula(str(message.text))==True):
+        #     #"""pregunta primer nombre del usuario."""
+        #     markup = ReplyKeyboardRemove()
+        #     msg = bot.send_message(message.chat.id, "como es tu primer nombre?",reply_markup=markup)
+        #     bot.register_next_step_handler(msg,preguntar_primerNombre)
+        #     #bot.register_next_step_handler(msg,preguntar_primerNombre)
+        # else:
+        #     print("F MENOR")
+        #     #bot.send_message(message.chat.id, "Paila menor")
+
+def preguntar_primer_nombre(message):
+    """almacena nombres del usuario y pregunta apellidos."""
+    nombres = message.text
+    nombres = nombres.split()
+    print("WEEE:",nombres)
+    print("tipo",type(nombres))
+    if (len(nombres)==1):
+        primerNombre = nombres[0]
+        segundoNombre = ""
+        print(primerNombre)
+        print(segundoNombre)
+        usuarios[message.chat.id]["nombre1"] = primerNombre
+        usuarios[message.chat.id]["nombre2"] = segundoNombre
+    elif (len(nombres)==2):
+        primerNombre = nombres[0]
+        segundoNombre = nombres[1]
+        print(primerNombre)
+        print(segundoNombre)
+        usuarios[message.chat.id]["nombre1"] = primerNombre
+        usuarios[message.chat.id]["nombre2"] = segundoNombre
+    
+    #toca ir almacenando los datos en un arreglo    
+        
+        
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Cuales son sus apellidos?:", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_apellidos)
+
+def preguntar_apellidos(message):
+    """almacena apellidos del usuario y pregunta nombre del negocio."""
+    apellidos = message.text
+    apellidos = apellidos.split()
+    print("WEEE:",apellidos)
+    print("tipo",type(apellidos))
+    if (len(apellidos)==1):
+        primerApellido = apellidos[0]
+        segundoApellido = ""
+        print(primerApellido)
+        print(segundoApellido)
+        usuarios[message.chat.id]["apellido1"] = primerApellido
+        usuarios[message.chat.id]["apellido2"] = segundoApellido
+    elif (len(apellidos)==2):
+        primerApellido = apellidos[0]
+        segundoApellido = apellidos[1]
+        print(primerApellido)
+        print(segundoApellido)
+        usuarios[message.chat.id]["apellido1"] = primerApellido
+        usuarios[message.chat.id]["apellido2"] = segundoApellido
+    
+    #toca ir almacenando los datos en un arreglo    
+    
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese el nombre de su negocio", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_nombre_negocio)
+
+
+def preguntar_nombre_negocio(message):
+    """almacena nombre del negocio y pregunta direccion."""
+    nombreNegocio = message.text 
+    print("nombreNegocio:",nombreNegocio)
+    usuarios[message.chat.id]["nombrenegocio"] = nombreNegocio
+    #toca ir almacenando los datos en un arreglo
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese su direccion", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_direccion)
+    
+def preguntar_direccion(message):
+    """almacena direccion y pregunta correo del usuario."""
+    direccion = message.text
+    print("direccion:",direccion)
+    #toca ir almacenando los datos en un arreglo
+    usuarios[message.chat.id]["direccion"] = direccion
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese su correo electronico:", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_correo)
+    
+def preguntar_correo(message):
+    """almacena correo y pregunta celular del usuario."""
+    correo = message.text
+    print("correo:",correo)
+    #toca ir almacenando los datos en un arreglo
+    usuarios[message.chat.id]["correo"] = correo
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese el numero de su celular", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_celular)
+ 
+def preguntar_celular(message):
+    """almacena celular y pregunta barrio del usuario."""
+    cel = message.text
+    print("celular:",cel)
+    #toca ir almacenando los datos en un arreglo
+    usuarios[message.chat.id]["celular"] = cel
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese el barrio", reply_markup=markup)
+    bot.register_next_step_handler(msg,preguntar_barrio)
+
+def preguntar_barrio(message):
+    """almacena barrio y pregunta ciudad del usuario."""
+    barrio = message.text
+    print("barrio:",barrio)
+    #toca ir almacenando los datos en un arreglo
+    usuarios[message.chat.id]["barrio"] = barrio
+    
+    markup = ForceReply()  # para responder citado
+    msg = bot.send_message(message.chat.id,"Por favor ingrese su ciudad", reply_markup=markup)
+    bot.register_next_step_handler(msg,guardar_datos_usuario)
+  
+# def preguntar_ciudad(message):
+#     """almacena ciudad y pregunta ciudad del usuario."""
+#     markup = ForceReply()  # para responder citado
+#     msg = bot.send_message(message.chat.id,"Por favor ingrese su ciudad", reply_markup=markup)
+#     bot.register_next_step_handler(msg,fecha_creacion)    
+    
+# def fecha_creacion(message):
+#     """almacena ciudad y obtiene fecha de creacion del usuario."""
+#     #markup = ForceReply()  # para responder citado
+   
+#     #msg="fecha creacion"
+    
+#     now = datetime.now()
+#     date_time = now.strftime("%y/%m/%d")
+#     #return str(date_time)
+#     msg = bot.send_message(message.chat.id,str(date_time))
+#     bot.register_next_step_handler(msg,guardarDatosUsuario)
+    
+#def guardarDatosUsuario(message):
+def guardar_datos_usuario(message):
+    """almacena ciudad y obtiene fecha de creacion del usuario."""
+    ciudad = message.text
+    print("ciudad:",ciudad)
+    #para la fecha de creacion:
+    
+    now = datetime.now()
+    date_time = now.strftime("%y-%m-%d")
+    fecha= date_time
+    print("fecha:",fecha)
+    print("tipo de la fecha:",type(fecha))
+    
+    
+    
+    
+    
+    
+    # now = datetime.now()
+    # date_time = now.strftime("%y/%m/%d")
+    # datetime_object = datetime.strptime(date_time, '%y/%m/%d')
+    # # extract the time from datetime_obj
+
+    # fecha= datetime_object.date()
+    # print("fecha:",fecha)
+    # print("tipo de la fecha:",type(fecha))
+    
+    #toca ir almacenando los datos en un arreglo
+    #usuarios[message.chat.id]["ciudad"] = message.text
+    usuarios[message.chat.id]["ciudad"] = ciudad
+    usuarios[message.chat.id]["creacion"] = fecha
+    
+    texto = 'Datos introducidos: \n'
+    texto+= f'<code>identificacion:</code>{usuarios[message.chat.id]["identificacion"]}\n'
+    texto+= f'<code>nombre1:</code>{usuarios[message.chat.id]["nombre1"]}\n'
+    texto+= f'<code>nombre2:</code>{usuarios[message.chat.id]["nombre2"]}\n'
+    texto+= f'<code>apellido1:</code>{usuarios[message.chat.id]["apellido1"]}\n'
+    texto+= f'<code>apellido2:</code>{usuarios[message.chat.id]["apellido2"]}\n'
+    texto+= f'<code>nombrenegocio:</code>{usuarios[message.chat.id]["nombrenegocio"]}\n'
+    texto+= f'<code>direccion:</code>{usuarios[message.chat.id]["direccion"]}\n'
+    texto+= f'<code>correo:</code>{usuarios[message.chat.id]["correo"]}\n'
+    texto+= f'<code>celular:</code>{usuarios[message.chat.id]["celular"]}\n'
+    texto+= f'<code>barrio:</code>{usuarios[message.chat.id]["barrio"]}\n'
+    texto+= f'<code>ciudad:</code>{usuarios[message.chat.id]["ciudad"]}\n'
+    texto+= f'<code>creacion:</code>{usuarios[message.chat.id]["creacion"]}\n'
+    markup = ReplyKeyboardRemove()  # eliminar botones
+    bot.send_message(message.chat.id,texto, parse_mode="html",reply_markup=markup)
+    print(usuarios)
+    
+    clienteNuevo = usuarios[message.chat.id]
+    print(clienteNuevo)
+    """guarda datos del usuario en la BD."""
+    r= requests.post("http://localhost:5000/cli/clientes",
+                     data=json.dumps(clienteNuevo),
+                     headers={"Content-Type": "application/json"})
+    print(r.text)
+    
+    #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+    #cli = cliente.json()
+    
+    #para borrar lo que hay en cache :
+    del usuarios[message.chat.id]
+    
+    
+    #markup = ForceReply()  # para responder citado
+    #msg = bot.send_message(message.chat.id,"Datos almacenados correctamente", reply_markup=markup)
+    bot.send_message(message.chat.id,"Datos almacenados correctamente")#, reply_markup=markup)
+    
+    #print("wee")
+    #bot.register_next_step_handler(msg,preguntar_nombreNegocio)
+
+
+
+def recibe_pedido(message):
+    #recibe el pedido del cliente
+    bot.send_message(message.chat.id,"que va pedir:")#, reply_markup=markup)
     
 # ########################################TOdO ESTO LO COMENTO ##################################
     
@@ -361,80 +676,93 @@ def preguntar_primerNombre(message):
 # ########################################TOdO ESTO LO COMENTO ##################################
     
     
+# #########################################esto era para guiarse ##################################  
     
+# def preguntar_edad(message):
+#     """pregunta la edad del usuario."""
+#     #nombre = message.text
+#     usuarios[message.chat.id]={}
+#     usuarios[message.chat.id]["nombre"]=message.text
+#     markup = ForceReply()  # para responder citado
+#     msg = bot.send_message(message.chat.id, "cuantos años tienes?", reply_markup=markup)
+#     bot.register_next_step_handler(msg,preguntar_sexo)
     
-def preguntar_edad(message):
-    """pregunta la edad del usuario."""
-    #nombre = message.text
-    usuarios[message.chat.id]={}
-    usuarios[message.chat.id]["nombre"]=message.text
-    markup = ForceReply()  # para responder citado
-    msg = bot.send_message(message.chat.id, "cuantos años tienes?", reply_markup=markup)
-    bot.register_next_step_handler(msg,preguntar_sexo)
-    
-def preguntar_sexo(message):
-    """pregunta el sexo del usuario."""
-    if not message.text.isdigit():
-        #informamos error y volvemos a preguntar
-        markup = ForceReply()  # para responder citado
-        msg = bot.send_message(message.chat.id, "ERROR: Debes indicar un numero. \n cuantos años tienes?")
-        bot.register_next_step_handler(msg,preguntar_sexo)
-    else: #si se introdujo la edad correctamente
-        usuarios[message.chat.id]["edad"] = int(message.text)
-        #definimos dos botones
-        markup= ReplyKeyboardMarkup(one_time_keyboard=True,
-                                    input_field_placeholder="Pulsa un boton",
-                                    resize_keyboard=True)
-        markup.add("Hombre","Mujer")
-        #preguntamos por el sexo
-        msg = bot.send_message(message.chat.id, "Cual es tu sexo?",reply_markup=markup)
-        bot.register_next_step_handler(msg,guardar_datos_usuario)
+# def preguntar_sexo(message):
+#     """pregunta el sexo del usuario."""
+#     if not message.text.isdigit():
+#         #informamos error y volvemos a preguntar
+#         markup = ForceReply()  # para responder citado
+#         msg = bot.send_message(message.chat.id, "ERROR: Debes indicar un numero. \n cuantos años tienes?")
+#         bot.register_next_step_handler(msg,preguntar_sexo)
+#     else: #si se introdujo la edad correctamente
+#         usuarios[message.chat.id]["edad"] = int(message.text)
+#         #definimos dos botones
+#         markup= ReplyKeyboardMarkup(one_time_keyboard=True,
+#                                     input_field_placeholder="Pulsa un boton",
+#                                     resize_keyboard=True)
+#         markup.add("Hombre","Mujer")
+#         #preguntamos por el sexo
+#         msg = bot.send_message(message.chat.id, "Cual es tu sexo?",reply_markup=markup)
+#         bot.register_next_step_handler(msg,guardar_datos_usuario)
         
-def guardar_datos_usuario(message):
-    #Guardamos los datos introducidos por el usuario
-    #si el sexo introducido no es valido:
-    if message.text!= "Hombre" and message.text!="Mujer":
-        #informamos del error y volvemos a preguntar
-        msg = bot.send_message(message.chat.id,"ERROR: Sexo no valido. \nPulsa un boton")
-        #volvemos a ejecutar esta funcion
-        bot.register_next_step_handler(msg, guardar_datos_usuario)
-    else:  #si el sexo introducido es valido
-        usuarios[message.chat.id]["sexo"]=message.text
-        texto = 'Datos introducidos: \n'
-        texto+= f'<code>NOMBRE:</code>{usuarios[message.chat.id]["nombre"]}\n'
-        texto+= f'<code>EDAD..:</code>{usuarios[message.chat.id]["edad"]}\n'
-        texto+= f'<code>SEXO..:</code>{usuarios[message.chat.id]["sexo"]}\n'
-        markup = ReplyKeyboardRemove()  # eliminar botones
-        bot.send_message(message.chat.id,texto, parse_mode="html",reply_markup=markup)
-        print(usuarios)
-        #para borrar lo que hay en cache :
-        del usuarios[message.chat.id]
+# def guardar_datos_usuario(message):
+#     #Guardamos los datos introducidos por el usuario
+#     #si el sexo introducido no es valido:
+#     if message.text!= "Hombre" and message.text!="Mujer":
+#         #informamos del error y volvemos a preguntar
+#         msg = bot.send_message(message.chat.id,"ERROR: Sexo no valido. \nPulsa un boton")
+#         #volvemos a ejecutar esta funcion
+#         bot.register_next_step_handler(msg, guardar_datos_usuario)
+#     else:  #si el sexo introducido es valido
+#         usuarios[message.chat.id]["sexo"]=message.text
+#         texto = 'Datos introducidos: \n'
+#         texto+= f'<code>NOMBRE:</code>{usuarios[message.chat.id]["nombre"]}\n'
+#         texto+= f'<code>EDAD..:</code>{usuarios[message.chat.id]["edad"]}\n'
+#         texto+= f'<code>SEXO..:</code>{usuarios[message.chat.id]["sexo"]}\n'
+#         markup = ReplyKeyboardRemove()  # eliminar botones
+#         bot.send_message(message.chat.id,texto, parse_mode="html",reply_markup=markup)
+#         print(usuarios)
+#         #para borrar lo que hay en cache :
+#         del usuarios[message.chat.id]
 
-
+# #########################################esto era para guiarse ##################################  
 #MAIN
 if __name__ == '__main__':
-    print("INICIANDO BOT...")
-    #definimos la ruta de archivo de configuracion de ngrok
-    conf.get_default().config_path = "./config_ngrok.yml"
-    #se establece region:
-    conf.get_default().region="us"
-    #creamos archivo de las credenciales de la api de ngrok:
-    ngrok.set_auth_token(NGROK_TOKEN)
-    #creamos un tunel https en el puerto 5000
-    ngrok_tunel = ngrok.connect(5000,bind_tls=True) 
-    #URL del tunel https creado
-    ngrok_url= ngrok_tunel.public_url
-    print("URL_NGROK:",ngrok_url)
-    #eliminamos el webhook
-    bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
-    #pequeña pausa
-    time.sleep(1)
-    #definimos el webhook
-    bot.set_webhook(url=ngrok_url)
-    #arrancamos el servidor:
-    web_server.run("0.0.0.0",port=5000)
     
-    #bucle infinito en el que se comprueba si hay nuevos mensajes:
-    #bot.infinity_polling()
+    
+    # Blueprints
+    web_server.register_blueprint(mainP, url_prefix='/prod')   #productos
+    web_server.register_blueprint(mainO, url_prefix='/ord')   #orden
+    web_server.register_blueprint(mainPe, url_prefix='/ped')   #pedido
+    web_server.register_blueprint(mainC, url_prefix='/cli')   #clientes
+    web_server.register_blueprint(mainPet, url_prefix='/pet')   #peticiones
+    
+    
+    
+    # print("INICIANDO BOT...")
+    # #definimos la ruta de archivo de configuracion de ngrok
+    # conf.get_default().config_path = "./config_ngrok.yml"
+    # #se establece region:
+    # conf.get_default().region="us"
+    # #creamos archivo de las credenciales de la api de ngrok:
+    # ngrok.set_auth_token(NGROK_TOKEN)
+    # #creamos un tunel https en el puerto 5000
+    # ngrok_tunel = ngrok.connect(5000,bind_tls=True) 
+    # #URL del tunel https creado
+    # ngrok_url= ngrok_tunel.public_url
+    # print("URL_NGROK:",ngrok_url)
+    # #eliminamos el webhook
+    # bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
+    # #pequeña pausa
+    # time.sleep(1)
+    # #definimos el webhook
+    # bot.set_webhook(url=ngrok_url)
+    # #arrancamos el servidor:
+    # #web_server.debug=True
+    # web_server.run("0.0.0.0",port=5000)
+    web_server.run()
+    
+    # #bucle infinito en el que se comprueba si hay nuevos mensajes:
+    # #bot.infinity_polling()
     
     
