@@ -61,20 +61,20 @@ CORS(web_server)
 #esto es mio#
 
 
-#markup para llamar la webapp
-def gen_markup():
-    #markup = quick_markup({"inline_keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]})
+# #markup para llamar la webapp
+# def gen_markup():
+#     #markup = quick_markup({"inline_keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]})
     
-    markup = InlineKeyboardMarkup()
-    markup.row_width = 2
+#     markup = InlineKeyboardMarkup()
+#     markup.row_width = 2
     
-    #markup.add(InlineKeyboardButton("Yes", callback_data="cb_yes"),
-    boton=InlineKeyboardButton(text= "realizar pedido",web_app="https://snazzy-tartufo-5f17da.netlify.app")
-    markup.add(boton)
-    #markup.add(InlineKeyboardButton("Realizar pedido", web_app = "url":"https://snazzy-tartufo-5f17da.netlify.app"))
-    #text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"
-                               #InlineKeyboardButton("No", callback_data="cb_no"))
-    return markup
+#     #markup.add(InlineKeyboardButton("Yes", callback_data="cb_yes"),
+#     boton=InlineKeyboardButton(text= "realizar pedido",web_app="https://snazzy-tartufo-5f17da.netlify.app")
+#     markup.add(boton)
+#     #markup.add(InlineKeyboardButton("Realizar pedido", web_app = "url":"https://snazzy-tartufo-5f17da.netlify.app"))
+#     #text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"
+#                                #InlineKeyboardButton("No", callback_data="cb_no"))
+#     return markup
 
 
 
@@ -186,8 +186,7 @@ def corroborar_cedula(message):
         #     #r= requests.post(url)
         # requests.post(url)
         
-        #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
-        cliente = requests.get(f"https://provbotwebapp.onrender.com/cli/clientes/{cedula}") #funciona
+        cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
         cli = cliente.json()
         existe = cli['exists']
         
@@ -436,8 +435,7 @@ def guardar_datos_usuario(message):
     clienteNuevo = usuarios[message.chat.id]
     print(clienteNuevo)
     """guarda datos del usuario en la BD."""
-    #r= requests.post("http://localhost:5000/cli/clientes",
-    r= requests.post("https://provbotwebapp.onrender.com/cli/clientes",
+    r= requests.post("http://localhost:5000/cli/clientes",
                      data=json.dumps(clienteNuevo),
                      headers={"Content-Type": "application/json"})
     print(r.text)
@@ -741,7 +739,7 @@ if __name__ == '__main__':
     
     
     
-    # print("INICIANDO BOT...")
+    print("INICIANDO BOT...")
     # #definimos la ruta de archivo de configuracion de ngrok
     # conf.get_default().config_path = "./config_ngrok.yml"
     # #se establece region:
@@ -754,15 +752,16 @@ if __name__ == '__main__':
     # ngrok_url= ngrok_tunel.public_url
     # print("URL_NGROK:",ngrok_url)
     # #eliminamos el webhook
-    bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
+    # bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
     # #pequeña pausa
-    time.sleep(1)
+    # time.sleep(1)
     # #definimos el webhook
-    bot.set_webhook(url="https://provbotwebapp.onrender.com")
-    # #arrancamos el servidor:
-    # #web_server.debug=True
-    #web_server.run("0.0.0.0",port=5000)
-    web_server.run()
+    # #bot.set_webhook(url="https://provbotwebapp.onrender.com")
+    # bot.set_webhook(url=ngrok_url)
+    #arrancamos el servidor:
+    #web_server.debug=True
+    web_server.run("0.0.0.0",port=5000)
+    #web_server.run()
     
     #web_server.run()
     
