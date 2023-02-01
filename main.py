@@ -203,9 +203,16 @@ def corroborar_cedula(message):
             
             #hasta aqui fino
             linkBot = 'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk'
-            markupWebApp = 'reply_markup={"inline_keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]}'
+            markupWebApp = 'reply_markup={"keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]}'
             
             requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=Hello User&{markupWebApp}')
+            
+            #aqui cambiar el time sleep por un requests.get del front que se activa cuando 
+            #pulse realizar pedido en el front
+            time.sleep(5)
+            
+            markup = ReplyKeyboardRemove()
+            bot.send_message(message.chat.id, "web app cerrada",reply_markup=markup)
             
             #hasta aqui fino
             
