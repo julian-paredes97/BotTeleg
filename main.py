@@ -210,7 +210,7 @@ def corroborar_cedula(message):
             #aqui cambiar el time sleep por un requests.get del front que se activa cuando 
             #pulse realizar pedido en el front
             
-            pedido = requests.get("https://flask-web-bot-app.loca.lt/pet/recibePedido") #funciona
+            pedido = requests.get("https://webbotflaskapi-kyha.onrender.com/pet/recibePedido") #funciona
             
             print("pedido pa:",pedido)
             time.sleep(5)
@@ -446,7 +446,8 @@ def guardar_datos_usuario(message):
     clienteNuevo = usuarios[message.chat.id]
     print(clienteNuevo)
     """guarda datos del usuario en la BD."""
-    r= requests.post("http://localhost:5000/cli/clientes",
+    #r= requests.post("http://localhost:5000/cli/clientes",
+    r= requests.post("https://webbotflaskapi-kyha.onrender.com/cli/clientes",
                      data=json.dumps(clienteNuevo),
                      headers={"Content-Type": "application/json"})
     print(r.text)
@@ -769,11 +770,12 @@ if __name__ == '__main__':
     # #definimos el webhook
     # #bot.set_webhook(url="https://provbotwebapp.onrender.com")
     # bot.set_webhook(url=ngrok_url)
-    bot.set_webhook(url="https://flask-web-bot-app.loca.lt")
+    #bot.set_webhook(url="https://flask-web-bot-app.loca.lt")
+    bot.set_webhook(url="https://webbotflaskapi-kyha.onrender.com")
     #arrancamos el servidor:
     #web_server.debug=True
-    web_server.run("0.0.0.0",port=5000)
-    #web_server.run()
+    #web_server.run("0.0.0.0",port=5000)
+    web_server.run()
     
     #web_server.run()
     
