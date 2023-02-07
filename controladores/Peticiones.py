@@ -11,7 +11,7 @@ mainPet = Blueprint('peticion_blueprint', __name__)
 
 @mainPet.route('/peticion')
 def index():
-    return "WEEEEEEEE puto"
+    return "WEEEEEEEE"
 
 
 
@@ -25,18 +25,23 @@ def recibePedido():
        req = request.get_json(silent=True, force=True) #ensayar con esto
        res = json.dumps(req, indent=4)
        print(res)
-       aber = json.loads(res)
+       ped = json.loads(res)
+       #aber = json.loads(res)
+       return ped
+    #    ###########esto esta melo###
+    #    total=0
        
-       total=0
+    #    for i in aber:
+    #        cantidad = i["cantidad"]
+    #        precio = i["precio"]
+    #        precioxCantidad = cantidad * precio
+    #        total = total + precioxCantidad
+    #        #print(i["cantidad"])
+    #        print(precioxCantidad)
+    #    print(total)
        
-       for i in aber:
-           cantidad = i["cantidad"]
-           precio = i["precio"]
-           precioxCantidad = cantidad * precio
-           total = total + precioxCantidad
-           #print(i["cantidad"])
-           print(precioxCantidad)
-       print(total)
+    #    ###########esto esta melo###
+       
        #cantidad = req.get('responseId')
            
        #temp = json.dumps(pedidos)
@@ -46,6 +51,12 @@ def recibePedido():
        #for p in pedidos:
        #    pedido.append(p)
        #print("PEDIDO;",pedido)
+       
+       #primero toca crear el pedido aca adentro,este tiene:
+       #idpedido,identificacion(FK),fechapedido,fechamaxentrega y totalpagar
+       #despues toca crear las ordenes en base al id del pedido, este recibe:
+       #idorden,codigo(FK),idpedido(FK),cantidad y el precioxcantidad
+       
     
        
     else :
@@ -61,4 +72,21 @@ def recibePedido():
     #db.session.add(pedido)
     #db.session.commit()
     
-    return "pedido recibido"
+        return "pedido no recibido"
+
+
+# #crear un producto
+# @mainP.route('/productos',methods=['POST'])
+# def crear_producto():
+#     codigo = request.json['codigo']  #era id
+#     categoria = request.json['categoria']
+#     descripcion = request.json['descripcion']
+#     precio = request.json['precio']
+#     cantidad = request.json['cantidad']
+#     imagen = request.json['imagen']
+#     producto = Producto(codigo = codigo,categoria = categoria,descripcion = descripcion,
+#                         precio = precio,cantidad = cantidad, imagen = imagen)
+#     db.session.add(producto)
+#     db.session.commit()
+    
+#     return "producto agregado"

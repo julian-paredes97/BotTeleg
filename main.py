@@ -203,12 +203,16 @@ def corroborar_cedula(message):
             
             #hasta aqui fino
             linkBot = 'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk'
-            markupWebApp = 'reply_markup={"keyboard":[[{"text":"My web app","web_app":{"url":"https://snazzy-tartufo-5f17da.netlify.app"}}]]}'
+            markupWebApp = 'reply_markup={"keyboard":[[{"text":"My web app","web_app":{"url":"https://profound-starburst-782573.netlify.app"}}]]}'
             
             requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=Hello User&{markupWebApp}')
             
             #aqui cambiar el time sleep por un requests.get del front que se activa cuando 
             #pulse realizar pedido en el front
+            
+            pedido = requests.get("https://flask-web-bot-app.loca.lt/pet/recibePedido") #funciona
+            
+            print("pedido pa:",pedido)
             time.sleep(5)
             
             markup = ReplyKeyboardRemove()
@@ -759,12 +763,13 @@ if __name__ == '__main__':
     # ngrok_url= ngrok_tunel.public_url
     # print("URL_NGROK:",ngrok_url)
     # #eliminamos el webhook
-    # bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
+    bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
     # #pequeña pausa
-    # time.sleep(1)
+    time.sleep(1)
     # #definimos el webhook
     # #bot.set_webhook(url="https://provbotwebapp.onrender.com")
     # bot.set_webhook(url=ngrok_url)
+    bot.set_webhook(url="https://flask-web-bot-app.loca.lt")
     #arrancamos el servidor:
     #web_server.debug=True
     web_server.run("0.0.0.0",port=5000)
