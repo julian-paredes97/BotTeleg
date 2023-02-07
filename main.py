@@ -210,7 +210,7 @@ def corroborar_cedula(message):
             #aqui cambiar el time sleep por un requests.get del front que se activa cuando 
             #pulse realizar pedido en el front
             
-            pedido = requests.get("https://webbotflaskapi-kyha.onrender.com/pet/recibePedido") #funciona
+            pedido = requests.get("https://flask-web-bot-app.loca.lt/pet/recibePedido") #funciona
             
             print("pedido pa:",pedido)
             time.sleep(5)
@@ -447,7 +447,7 @@ def guardar_datos_usuario(message):
     print(clienteNuevo)
     """guarda datos del usuario en la BD."""
     #r= requests.post("http://localhost:5000/cli/clientes",
-    r= requests.post("https://webbotflaskapi-kyha.onrender.com/cli/clientes",
+    r= requests.post("https://flask-web-bot-app.loca.lt/cli/clientes",
                      data=json.dumps(clienteNuevo),
                      headers={"Content-Type": "application/json"})
     print(r.text)
