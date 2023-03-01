@@ -10,17 +10,19 @@ mainO = Blueprint('orden_blueprint', __name__)
 
 @mainO.route('/orden')
 def index():
-    return "WEEEEEEEE puto"
+    return "WEEEEEEEE"
 
 #crear una orden
 @mainO.route('/ordenes',methods=['POST'])
 def crear_orden():
     idorden = request.json['idorden']
-    codigo = request.json['codigo']
     idpedido = request.json['idpedido']
+    codigo = request.json['codigo']
+    descripcion = request.json['descripcion']
+    precio = request.json['precio']
     cantidad = request.json['cantidad']
     precioxcantidad= request.json['precioxcantidad']
-    orden = Orden(idorden=idorden,codigo=codigo,idpedido=idpedido,cantidad=cantidad,precioxcantidad=precioxcantidad)
+    orden = Orden(idorden=idorden,idpedido=idpedido,codigo=codigo,descripcion=descripcion,precio=precio,cantidad=cantidad,precioxcantidad=precioxcantidad)
     db.session.add(orden)
     db.session.commit()
     
@@ -56,11 +58,14 @@ def delete_orden(idorden):
 def update_orden(idorden):
     orden = Orden.query.filter_by(idorden = idorden)
     #idorden = request.json['idorden']
-    codigo = request.json['codigo']
+    
     idpedido = request.json['idpedido']
+    codigo = request.json['codigo']
+    descripcion = request.json['descripcion']
+    precio = request.json['precio']
     cantidad = request.json['cantidad']
     precioxcantidad= request.json['precioxcantidad']
     
-    orden.update(dict(codigo=codigo,idpedido=idpedido,cantidad=cantidad,precioxcantidad=precioxcantidad))
+    orden.update(dict(idpedido=idpedido,codigo=codigo,descripcion=descripcion,precio=precio,cantidad=cantidad,precioxcantidad=precioxcantidad))
     db.session.commit()
     return {'event':format_orden(orden.one())}

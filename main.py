@@ -4,9 +4,10 @@ from telebot.types import ReplyKeyboardMarkup #para crear botones
 from telebot.types import ForceReply #para citar un mensaje
 from telebot.types import ReplyKeyboardRemove # para eliminar botones
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton #para los botones para abrir la webapp
+from telebot.types import MenuButtonWebApp, WebAppInfo #para los botones para abrir la webapp
 from flask import Flask, request, Blueprint #para crear el servidor web
 import datetime
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import requests
 import json
@@ -14,12 +15,17 @@ import json
 
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import func
 from controladores.Producto import mainP
 from controladores.Orden import mainO
 from controladores.Pedido import mainPe
 from controladores.Cliente import mainC #, get_cliente, get_clientes
-from controladores.Peticiones import mainPet #, recibePedido
-#from modelos.ModeloCliente import Cliente, format_cliente
+#from controladores.Peticiones import mainPet #, recibePedido
+from modelos.ModeloPedido import Pedido
+from modelos.ModeloOrden import Orden
+from modelos.ModeloCliente import Cliente
+
+#import threading
 
 #esto neh por ahora:
 #from controladores.Producto import mainP
@@ -42,6 +48,17 @@ db=SQLAlchemy(web_server)
 CORS(web_server)
 #esto es mio#
 
+localtunnel = "https://flask-web-bot-app.loca.lt"
+pagekite = "https://flaskwebbotapp.pagekite.me/"
+
+webURL= localtunnel
+
+identificacionUsuario = "0"
+pedidoCliente = ""
+
+identificacionQuemada = "1234"  # esto es para pruebas
+
+banderaPedidoListo = "False"
 
 # #aber si sirve esta mamada:
 # async def get_cliente2(identificacion):
@@ -55,6 +72,9 @@ CORS(web_server)
 #         return True
 #     else:
 #         return False
+
+
+
 
 
 
@@ -77,6 +97,30 @@ CORS(web_server)
 #     return markup
 
 
+class IdentificacionU:
+    def __init__(self, identificacion):
+        self.identificacion = identificacion
+
+class BanderaPedido:
+    def __init__(self, banderaPedListo):
+        self.bandera = banderaPedListo
+
+class TextoPedUsuario:
+    def __init__(self, textoPedidoUsuario):
+        self.textoPedidoUsuario = textoPedidoUsuario
+class TextoOrdUsuario:
+    def __init__(self, textoOrdenUsuario):
+        self.textoOrdenUsuario = textoOrdenUsuario
+    
+
+BanderaPedido.bandera = "False"
+# #variables globales en la que guardaremos los datos del pedido del usuario
+# textoPedidoUsuario = '<b>Datos Pedido:</b> \n'
+# textoOrdenUsuario =  '<b>Datos de la Orden:</b> \n'
+TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
+TextoOrdUsuario.textoOrdenUsuario = '<u><b>Datos de la Orden:</b></u> \n'
+
+
 
 #gestiona las peticiones POST enviadas al servidor web
 @web_server.route('/', methods=['POST'])
@@ -87,6 +131,9 @@ def webhook():
         #print("update:",update)
         bot.process_new_updates([update])
         return "OK",200
+    
+    
+    
 
 #posibles saludos por parte del usuario
 saludo=["hola","hey","buenas","buen dia","buena tarde","quisiera hacer un pedido","como esta","saludos"]
@@ -112,6 +159,38 @@ def cmd_start(message):
     #preguntamos por la accion
     msg = bot.send_message(message.chat.id, "Como podemos ayudarle?",reply_markup=markup)
     bot.register_next_step_handler(msg,realizar_pedido)
+    
+
+@bot.message_handler(commands=['pedir'])
+def cmd_start(message):
+    """ Muestra las acciones disponibles. """
+    
+    # req= requests.post("https://flask-web-bot-app.loca.lt/botdata",
+    # #data = json.dumps(cedula),
+    # data = json.dumps(identificacionQuemada),
+    # headers={"Content-Type": "application/json"})
+    # print(req.text)
+    # print("###############################################")
+    
+    # print("aber")
+    # markup = MenuButtonWebApp(InlineKeyboardButton(),"My web app",WebAppInfo("https://sweet-khapse-c8cb17.netlify.app"))
+    # bot.send_message(message.chat.id,"que va pedir",reply_markup=markup)
+    
+    linkBot = 'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk'
+    markupWebApp = 'reply_markup={"keyboard":[[{"text":"My web app","web_app":{"url":"https://sweet-khapse-c8cb17.netlify.app"}}]]}'
+            
+    requests.get(f'{linkBot}/sendMessage?chat_id={message.chat.id}&text=Hello User&{markupWebApp}')
+    
+    # time.sleep(5)
+    
+    # markupWebApp2 = 'web_app: close'
+    
+    # requests.get(f'{linkBot}/sendMessage?chat_id={message.chat.id}&text=Hello User&{markupWebApp2}')
+    
+    # markup = ReplyKeyboardRemove()
+    # bot.send_message(message.chat.id, "Pedido realizado con exito.",reply_markup=markup)
+    
+    
 
 
 ### borrar esto despues #####
@@ -150,7 +229,7 @@ def realizar_pedido(message):
         #msg = bot.send_message(message.chat.id,reply_markup=markup)
         bot.register_next_step_handler(msg,realizar_pedido)
     
-    if message.text=="Salir":
+    if message.text.lower()=="salir":
         markup= ReplyKeyboardRemove()
         bot.send_message(message.chat.id,"Gracias por comunicarse con nosotros, Hasta luego",reply_markup=markup)
         
@@ -168,11 +247,11 @@ def corroborar_cedula(message):
         #informamos error y volvemos a preguntar
         # markup = ForceReply()  # para responder citado
         #markup = ReplyKeyboardRemove()
-        msg = bot.send_message(message.chat.id, "ERROR: Debes indicar un numero. \n cual es tu cedula?") #,reply_markup=markup)
+        msg = bot.send_message(message.chat.id, "ERROR: Debes indicar un numero valido. \n cual es tu cedula?") #,reply_markup=markup)
         bot.register_next_step_handler(msg,corroborar_cedula)
     
     
-    else:
+    if message.text.isdecimal():   #esto era un else
         #toca verificar aca adentro que el usuario este en la bd, si esta
         #se procede a hacer pedido, sino se piden datos al usuario
         #aberlo = await async get_cliente2(str(1144094441))
@@ -186,7 +265,8 @@ def corroborar_cedula(message):
         #     #r= requests.post(url)
         # requests.post(url)
         
-        cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+        #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+        cliente = requests.get(f"{webURL}/cli/clientes/{cedula}") #funciona
         cli = cliente.json()
         existe = cli['exists']
         
@@ -194,29 +274,163 @@ def corroborar_cedula(message):
         
         if existe=="True":
             nombre = cli['event']['nombre1']
+            nombre2 = cli['event']['nombre2']
             nombre = nombre.lower()
-            chatId = message.chat.id   #2089210179
+            nombre2 = nombre2.lower()
+            nombrecompleto = nombre + " " + nombre2
+            chatId = message.chat.id
             print("truesito pa")
             
+            
+            #bot.send_message(message.chat.id, f"hola {nombrecompleto}, que vas a pedir el dia de hoy?")
+            #bot.register_next_step_handler(msg,recibe_pedido)
+            
+            
+            ### ANTES SERVIA CON ESTE GLOBAL:
+            # global identificacionUsuario
+            # identificacionUsuario = str(cedula)
+            # print("identificacionUsuario",identificacionUsuario)
+            ### ANTES SERVIA CON ESTE GLOBAL:
+            
+            IdentificacionU.identificacion= str(cedula)
+            
+            
+            #envia datos del bot al front
+            #req= requests.post(f"{webURL}/botdata",  #esto no te iba a servir ni a bate
+            
+            # req= requests.post("https://flask-web-bot-app.loca.lt/botdata",
+            # #data = json.dumps(cedula),
+            # data = json.dumps(identificacionUsuario),
+            # headers={"Content-Type": "application/json"})
+            # print(req.text)
+            # print("###############################################")
             
             
             
             #hasta aqui fino
             linkBot = 'https://api.telegram.org/bot5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk'
-            markupWebApp = 'reply_markup={"keyboard":[[{"text":"My web app","web_app":{"url":"https://profound-starburst-782573.netlify.app"}}]]}'
+            markupWebApp = 'reply_markup={"keyboard":[[{"text":"REALIZAR PEDIDO :)","web_app":{"url":"https://sweet-khapse-c8cb17.netlify.app"}}]]}'
             
-            requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=Hello User&{markupWebApp}')
+            #texto=hola {nombrecompleto}, que vas a pedir el dia de hoy?
+            
+            requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=hola {nombrecompleto}, que vas a pedir el dia de hoy?&{markupWebApp}')
+            #requests.get(f'{linkBot}/sendMessage?chat_id={chatId}&text=Hello User&{markupWebApp}')
             
             #aqui cambiar el time sleep por un requests.get del front que se activa cuando 
             #pulse realizar pedido en el front
             
-            pedido = requests.get("https://flask-web-bot-app.loca.lt/pet/recibePedido") #funciona
+            # pedlisto = requests.get("https://velvety-pastelito-968bba.netlify.app") #funciona
+            # print("PedListo:",pedlisto)
+            # ped = pedlisto.json()
+            # print("PED:",ped)
             
-            print("pedido pa:",pedido)
-            time.sleep(5)
+            # #existe = cli['exists']
+            # print("pedlisto:",ped)
             
-            markup = ReplyKeyboardRemove()
-            bot.send_message(message.chat.id, "web app cerrada",reply_markup=markup)
+            # global banderaPedidoListo
+            # if(banderaPedidoListo=="True"):
+            #     print("que bendicion")
+        
+            #print("existe o nel:",existe)
+            
+            #esto funciona bello#
+            #revisar bandera:
+            
+            # ESTO ES LO QUE VOY A INTENTAR#
+            
+            while(BanderaPedido.bandera == "False"):
+                continue
+       
+            # ESTO ES LO QUE VOY A INTENTAR#
+            
+            # # ESTO ESTA fUNCIONANDO#
+            # global banderaPedidoListo
+            # while(banderaPedidoListo=="False"):
+            #     continue
+            #     #print("esperando...")
+            # # ESTO ESTA fUNCIONANDO#
+                
+                
+            if(BanderaPedido.bandera == "True"):  # ESTO ESTA fUNCIONANDO# ERA banderaPedidoListo
+            #if(banderaPedidoListo=="True"):  # ESTO ESTA fUNCIONANDO# ERA banderaPedidoListo
+                print("PedidoListo")
+                #mensaje que se va a enviar al proveedor con el pedido:
+                bot.send_message(-860836322, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")#,reply_markup=markup)
+                
+                #ESTO QUE ESTA COMENTADP ACA SIRVE CON GLOBAL:
+                #global textoPedidoUsuario
+                #bot.send_message(-860836322, textoPedidoUsuario,parse_mode="html")#,reply_markup=markup)
+                #mensaje que se va a enviar al proveedor con las ordenes:
+                bot.send_message(-860836322, TextoOrdUsuario.textoOrdenUsuario,parse_mode="html")#,reply_markup=markup)
+                #global textoOrdenUsuario
+                #bot.send_message(-860836322, textoOrdenUsuario,parse_mode="html")#,reply_markup=markup)
+
+                #mensaje que se va a enviar al proveedor con el pedido y ordenes:
+                
+                bot.send_message(message.chat.id, "<u><b>Pedido realizado con exito!</b></u>",parse_mode="html")#,reply_markup=markup)
+                #bot.send_message(chat_id=chat_id, text='<b>Example message</b>',parse_mode=telegram.ParseMode.HTML
+            #aqui vuelve al menu principal para ya salirse o hacer otro pedido:
+            
+            # time.sleep(2)
+            
+            markup= ReplyKeyboardMarkup(one_time_keyboard=True,
+                                        input_field_placeholder="Pulsa un boton",
+                                        resize_keyboard=True)
+            markup.add("Realizar pedido","Salir")
+        
+            #preguntamos por la accion
+            msg = bot.send_message(message.chat.id,"Necesitas algo mas?",reply_markup=markup)
+            #msg = bot.send_message(message.chat.id,reply_markup=markup)
+            bot.register_next_step_handler(msg,realizar_pedido)
+            #esto funciona bello#
+            
+            
+            
+            
+            # elif(banderaPedidoListo==False):
+            #     print("noj paila")
+            
+            # pedlisto = requests.get("https://warm-mooncake-6a85ed.netlify.app") #funciona
+            # ped = pedlisto.json()
+            # #existe = cli['exists']
+
+            # print("ped:",ped)
+            # #print("existe o nel:",existe)
+            
+            # #cerrar webapp
+            # time.sleep(5)
+            # markup = ReplyKeyboardRemove()
+            # bot.send_message(message.chat.id, "web app cerrada",reply_markup=markup)
+            
+            
+            
+            # ######### esto no funca ########## lo intente ayer y meh
+            
+            # req= requests.post(f"{webURL}/botdata",
+            # #data = json.dumps(cedula),
+            # data = json.dumps(identificacionUsuario),
+            # headers={"Content-Type": "application/json"})
+            # print(req.text)
+            # print("###############################################")
+            
+            # #pedido = requests.get(f"{webURL}/pet/recibePedido") #funciona
+            # pedido = requests.get(f"{webURL}/recibePedido") #funciona
+            # ped= pedido.json()
+            # print("ped:",ped)
+            # print("pedido pa:",pedido)
+            
+            # ######### esto no funca ##########
+            
+            #meter esto para ver el pedido:
+            # cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
+            # cli = cliente.json()
+            # existe = cli['exists']
+            
+            #time.sleep(5)
+            
+            #cerrar webapp
+            #markup = ReplyKeyboardRemove()
+            #bot.send_message(message.chat.id, "web app cerrada",reply_markup=markup)
             
             #hasta aqui fino
             
@@ -228,7 +442,7 @@ def corroborar_cedula(message):
             """almacena la nueva cedula y pregunta nombres del usuario."""
             usuarios[message.chat.id]={}
             usuarios[message.chat.id]["identificacion"]=message.text
-            #markup = ReplyKeyboardRemove()
+            #markup = ForceReply()  # para responder citado
             bot.send_message(message.chat.id, "No te encuentras registado en nuestra base de datos, por favor ingresa los siguientes datos personales:")
             msg = bot.send_message(message.chat.id, "Nombre completo (ej: Juan David):")#,reply_markup=markup)
             #bot.register_next_step_handler(msg,preguntar_primerNombre)
@@ -447,7 +661,9 @@ def guardar_datos_usuario(message):
     print(clienteNuevo)
     """guarda datos del usuario en la BD."""
     #r= requests.post("http://localhost:5000/cli/clientes",
-    r= requests.post("https://flask-web-bot-app.loca.lt/cli/clientes",
+    #r= requests.post("https://flask-web-bot-app.loca.lt/cli/clientes",
+    #r= requests.post("https://flaskwebbotapp.pagekite.me/cli/clientes",
+    r= requests.post(f"{webURL}/cli/clientes",
                      data=json.dumps(clienteNuevo),
                      headers={"Content-Type": "application/json"})
     print(r.text)
@@ -465,6 +681,16 @@ def guardar_datos_usuario(message):
     
     #print("wee")
     #bot.register_next_step_handler(msg,preguntar_nombreNegocio)
+    
+    markup= ReplyKeyboardMarkup(one_time_keyboard=True,
+                                        input_field_placeholder="Pulsa un boton",
+                                        resize_keyboard=True)
+    markup.add("Realizar pedido","Salir")
+        
+    #preguntamos por la accion
+    msg = bot.send_message(message.chat.id,"Necesitas algo mas?",reply_markup=markup)
+    #msg = bot.send_message(message.chat.id,reply_markup=markup)
+    bot.register_next_step_handler(msg,realizar_pedido)
 
 
 
@@ -738,6 +964,301 @@ def recibe_pedido(message):
 #         del usuarios[message.chat.id]
 
 # #########################################esto era para guiarse ##################################  
+
+def max_id_pedidos():
+    result = db.session.query(func.max(Pedido.idpedido)).scalar()
+    return result
+
+def max_id_ordenes():
+    result = db.session.query(func.max(Orden.idorden)).scalar()
+    return result
+
+def datos_cliente(identificacion):
+    #cli = db.session.query(Cliente).filter(Cliente.identificacion == identificacion)
+    cli = db.session.query(Cliente).filter(
+        Cliente.identificacion == str(identificacion)
+    ).first()
+    return cli
+
+#results = max_id_pedidos()
+
+#recibe bandera del front si ya acabo el pedido:
+@web_server.route('/pedidoListo',methods=['POST','GET'])
+def pedido_listo():
+    if request.method == 'POST':
+       print("WEEEEEE")
+       #pedidos = request.data
+       req = request.get_json(silent=True, force=True) #ensayar con esto
+       res = json.dumps(req, indent=4)
+       print(res)
+       ped = json.loads(res)
+       #aber = json.loads(res)
+       
+       # ESTO ES LO QUE VOY A INTENTAR#
+       BanderaPedido.bandera = str(ped['flag'])
+       print("bandera pedido:",BanderaPedido.bandera)
+       return BanderaPedido.bandera
+       
+       # ESTO ES LO QUE VOY A INTENTAR#
+       
+    #    # ESTO ESTA fUNCIONANDO#
+       
+    #    global banderaPedidoListo
+    #    banderaPedidoListo = str(ped['flag'])
+    #    print("bandera pedido:",banderaPedidoListo)
+    #    return banderaPedidoListo
+    #    # ESTO ESTA fUNCIONANDO#
+
+    else:
+        print("F")
+        return "Error en el pedido"
+       
+    # banderaPedidoListo = 
+    # identif = identificacionUsuario
+    # print("bandera:",identif)
+    # return identif
+
+#envia datos del bot al front
+@web_server.route('/botdata',methods=['GET','POST'])
+def datosbot():
+    identif = IdentificacionU.identificacion
+    #identif = identificacionUsuario    #ASI ESTABA ANTES
+    print("identif:",identif)
+    return identif
+
+
+#recibir pedido que llega desde el front:
+@web_server.route('/recibePedido',methods=['GET', 'POST'])
+def recibePedido():
+    
+    if request.method == 'POST':
+       print("WEEEEEE")
+       #pedidos = request.data
+       req = request.get_json(silent=True, force=True) #ensayar con esto
+       res = json.dumps(req, indent=4)
+       print(res)
+       ped = json.loads(res)
+       #aber = json.loads(res)
+       pedidoCliente = ped
+       print("pedido:\n",pedidoCliente)
+       #return ped
+       #return pedidoCliente
+       ###########esto esta melo###
+       totalpedido=0
+       
+       ######## datos para tabla pedidos ########
+       maxIdPedido = max_id_pedidos()           #para poder incrementar el id en la bd
+       print("max id pedidos:",maxIdPedido)
+       idpedido = maxIdPedido + 1
+       identificacion = 0
+       nombrenegocio = ""
+       
+       #####################################
+       identificacion = ped["identificacion"]
+       #print("identificacion:",ped["identificacion"])
+       print("identificacion:",identificacion)
+       datoscliente = datos_cliente(identificacion)
+       print("datoscliente:",datoscliente)
+       nombres= (datoscliente.nombre1 + " " + datoscliente.nombre2)
+       print("nombres:",nombres)
+       apellidos= (datoscliente.apellido1 + " " + datoscliente.apellido2)
+       print("apellidos:",apellidos)
+       nombrenegocio = datoscliente.nombrenegocio
+       print("nombrenegocio:",nombrenegocio)
+       direccion = datoscliente.direccion
+       print("direccion:",direccion)
+       ciudad = datoscliente.ciudad
+       print("ciudad:",ciudad)
+       barrio = datoscliente.barrio
+       print("barrio:",barrio)
+       correo = datoscliente.correo
+       print("correo:",correo)
+       celular = datoscliente.celular
+       print("celular:",celular)
+       
+       #para sacar las fechas:
+       now = datetime.now()
+       date_time = now.strftime("%y-%m-%d")
+       fechapedido= date_time
+       print("fechapedido:",fechapedido)
+       fechamaxentrega= now + timedelta(days=1)
+       fechamaxentrega= fechamaxentrega.strftime("%y-%m-%d")
+       print("fechamaxentrega",fechamaxentrega)
+       totalpagar=0
+       
+       
+       
+       ######## datos para tabla ordenes ########
+       maxIdOrden = max_id_ordenes()            #para poder incrementar el id en la bd
+       print("max id ordenes:",maxIdOrden)
+       idorden = maxIdOrden + 1
+       cantidades=[]
+       preciosxcantidad=[]
+       codigosproducto=[]
+       descripciones=[]
+       precios=[]
+       
+       
+       for i in ped:
+           cantidad=0
+           precioxcantidad=0
+           codigoproducto=0
+           descripcion=""
+           precioprod=0
+
+           if i.isdigit():
+               cantidad = ped[i]["cantidad"]
+               cantidades.append(cantidad)
+               
+               precioprod = ped[i]["precio"]
+               precios.append(precioprod)
+               
+               precioxcantidad = cantidad*precioprod
+               preciosxcantidad.append(precioxcantidad)
+               
+               codigoproducto = ped[i]["codigo"]
+               codigosproducto.append(codigoproducto)
+               
+               descripcion = ped[i]["descripcion"]
+               descripciones.append(descripcion)
+               
+               totalpagar = totalpagar + precioxcantidad
+       
+       print("cantidades",cantidades)
+       print("preciosxcantidad",preciosxcantidad)
+       print("codigosproducto",codigosproducto)
+       print("descripciones",descripciones)
+       print("precios",precios)
+       print("totalpagar",totalpagar)
+
+       #agregar pedido ya con todos los datos que se tienen
+       pedidofinal = {}
+       #usuarios[message.chat.id]["ciudad"] = ciudad
+       pedidofinal["idpedido"] = idpedido
+       pedidofinal["identificacion"] = identificacion
+       pedidofinal["nombres"] = nombres
+       pedidofinal["apellidos"] = apellidos
+       pedidofinal["nombrenegocio"] = nombrenegocio
+       pedidofinal["direccion"] = direccion
+       pedidofinal["ciudad"] = ciudad
+       pedidofinal["barrio"] = barrio
+       pedidofinal["correo"] = correo
+       pedidofinal["celular"] = celular
+       pedidofinal["fechapedido"] = fechapedido
+       pedidofinal["fechamaxentrega"] = fechamaxentrega
+       pedidofinal["totalpagar"] = totalpagar
+       print(pedidofinal)
+       
+       ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+       
+    #    global textoPedidoUsuario
+    #    textoPedidoUsuario+= f'<code>Id pedido:</code>{idpedido}\n'
+    #    textoPedidoUsuario+= f'<code>Identificacion:</code>{identificacion}\n'
+    #    textoPedidoUsuario+= f'<code>Nombres:</code>{nombres}\n'
+    #    textoPedidoUsuario+= f'<code>Apellidos:</code>{apellidos}\n'
+    #    textoPedidoUsuario+= f'<code>Nombre negocio:</code>{nombrenegocio}\n'
+    #    textoPedidoUsuario+= f'<code>Direccion:</code>{direccion}\n'
+    #    textoPedidoUsuario+= f'<code>Barrio:</code>{barrio}\n'
+    #    textoPedidoUsuario+= f'<code>Correo:</code>{correo}\n'
+    #    textoPedidoUsuario+= f'<code>Celular:</code>{celular}\n'
+    #    textoPedidoUsuario+= f'<code>Fecha pedido:</code>{fechapedido}\n'
+    #    textoPedidoUsuario+= f'<code>Fecha max entrega:</code>{fechamaxentrega}\n'
+    #    textoPedidoUsuario+= f'<code>Total a pagar:</code>{totalpagar}\n'
+       
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Id pedido:</b></code>{idpedido}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Identificacion:</b></code>{identificacion}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Nombres:</b></code>{nombres}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Apellidos:</b></code>{apellidos}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Nombre negocio:</b></code>{nombrenegocio}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Direccion:</b></code>{direccion}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Ciudad:</b></code>{ciudad}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Barrio:</b></code>{barrio}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Correo:</b></code>{correo}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Celular:</b></code>{celular}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Fecha pedido:</b></code>{fechapedido}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Fecha max entrega:</b></code>{fechamaxentrega}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Total a pagar:</b></code>{totalpagar}\n'
+       
+       ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+       
+       #guarda pedido del usuario en la BD:
+       p= requests.post(f"{webURL}/ped/pedidos",
+                        data=json.dumps(pedidofinal),
+                        headers={"Content-Type": "application/json"})
+       print(p.text)
+       
+       #for para ir agregando cada orden con el mismo numero de pedido
+       j=0
+       tam=len(codigosproducto)
+       while(j<tam):
+           ordenfinal={}
+           ordenfinal["idorden"] = idorden
+           ordenfinal["idpedido"] = idpedido
+           ordenfinal["codigo"] = str(codigosproducto[j])
+           ordenfinal["descripcion"] = descripciones[j]
+           ordenfinal["precio"] = precios[j]
+           ordenfinal["cantidad"] = cantidades[j]
+           ordenfinal["precioxcantidad"] = preciosxcantidad[j]
+           ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+        #   global textoOrdenUsuario
+        #    textoOrdenUsuario+= f'<code>Id Orden:</code>{ordenfinal["idorden"]}\n'
+        #    textoOrdenUsuario+= f'<code>Descripcion del producto:</code>{ordenfinal["descripcion"]}\n'
+        #    textoOrdenUsuario+= f'<code>Codigo del producto:</code>{ordenfinal["codigo"]}\n'
+        #    textoOrdenUsuario+= f'<code>Precio:</code>{ordenfinal["precio"]}\n'
+        #    textoOrdenUsuario+= f'<code>Cantidad:</code>{ordenfinal["cantidad"]}\n'
+        #    textoOrdenUsuario+= f'<code>Precio X Cantidad:</code>{ordenfinal["precioxcantidad"]}\n'
+           
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>• Id Orden:</b></code>{ordenfinal["idorden"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Descripcion del producto:</b></code>{ordenfinal["descripcion"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Codigo del producto:</b></code>{ordenfinal["codigo"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Precio:</b></code>{ordenfinal["precio"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Cantidad:</b></code>{ordenfinal["cantidad"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Precio X Cantidad:</b></code>{ordenfinal["precioxcantidad"]}\n\n'
+           
+           ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+           #guarda orden del usuario en la BD:
+           #guarda pedido del usuario en la BD:
+           o= requests.post(f"{webURL}/ord/ordenes",
+                            data=json.dumps(ordenfinal),
+                            headers={"Content-Type": "application/json"})
+           print(o.text)
+           idorden=idorden+1
+           
+           
+           
+           j=j+1
+       
+       
+       
+       return pedidoCliente
+       
+    
+    if request.method == 'GET':
+        
+    # else :
+    #     print("F")
+    # idpedido = request.json['idpedido']
+    # identificacion = request.json['identificacion']
+    # fechapedido = request.json['fechapedido']
+    # fechamaxentrega = request.json['fechamaxentrega']
+    # totalpagar= request.json['totalpagar']
+    
+    
+    #pedido = Pedido(idpedido=idpedido,identificacion=identificacion,fechapedido=fechapedido,fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
+    #db.session.add(pedido)
+    #db.session.commit()
+    
+        return "pedido no recibido"
+
+
+
+# def recibir_mensajes():
+#     bot.remove_webhook() # cuando necesite borrar el webhook pa probar con dialogflow o otra cosa
+#     # #pequeña pausa
+#     time.sleep(1)
+#     bot.set_webhook(url=f"{webURL}") 
+
+
 #MAIN
 if __name__ == '__main__':
     
@@ -747,7 +1268,7 @@ if __name__ == '__main__':
     web_server.register_blueprint(mainO, url_prefix='/ord')   #orden
     web_server.register_blueprint(mainPe, url_prefix='/ped')   #pedido
     web_server.register_blueprint(mainC, url_prefix='/cli')   #clientes
-    web_server.register_blueprint(mainPet, url_prefix='/pet')   #peticiones
+    #web_server.register_blueprint(mainPet, url_prefix='/pet')   #peticiones
     
     
     
@@ -770,8 +1291,14 @@ if __name__ == '__main__':
     # #definimos el webhook
     # #bot.set_webhook(url="https://provbotwebapp.onrender.com")
     # bot.set_webhook(url=ngrok_url)
-    #bot.set_webhook(url="https://flask-web-bot-app.loca.lt")
-    bot.set_webhook(url="https://webbotflaskapi-kyha.onrender.com")
+    #bot.set_webhook(url="https://flask-web-bot-app.loca.lt")   #localtunnel
+    #bot.set_webhook(url="https://webbotflaskapi-kyha.onrender.com")
+    #bot.set_webhook(url="https://flaskwebbotapp.pagekite.me")  #pagekite
+    
+    bot.set_webhook(url=f"{webURL}") 
+    #hilo_bot= threading.Thread(name="hilo_bot",target=recibir_mensajes)
+    #hilo_bot.start()
+    
     #arrancamos el servidor:
     #web_server.debug=True
     #web_server.run("0.0.0.0",port=5000)
