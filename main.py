@@ -23,7 +23,7 @@ from controladores.Cliente import mainC #, get_cliente, get_clientes
 #from controladores.Peticiones import mainPet #, recibePedido
 from modelos.ModeloPedido import Pedido
 from modelos.ModeloOrden import Orden
-from modelos.ModeloCliente import Cliente
+from modelos.ModeloCliente import Cliente , format_cliente
 from utils.db import db
 
 #import threading
@@ -267,18 +267,42 @@ def corroborar_cedula(message):
         # requests.post(url)
         
         #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
-        cliente = requests.get(f"{webURL}/cli/clientes/{cedula}") #funciona
-        cli = cliente.json()
-        existe = cli['exists']
         
-        print("existe o nel:",existe)
+        # #comentado
+        # cliente = requests.get(f"{webURL}/cli/clientes/{cedula}") #funciona
+        # cli = cliente.json()
+        # existe = cli['exists']
+        # print("existe o nel:",existe)
+        # #comentado
         
-        if existe=="True":
-            nombre = cli['event']['nombre1']
-            nombre2 = cli['event']['nombre2']
-            nombre = nombre.lower()
+        exists = db.session.query(db.exists().where(Cliente.identificacion == cedula)).scalar()
+        exists = str(exists)
+        print("existe o no:",exists.split())
+        print("tipo:",type(exists))
+        
+        
+        #if existe=="True":
+        if exists == "True":
+            cedula = str(cedula)
+            IdentificacionU.identificacion = cedula
+            
+            print("entre")
+            
+            
+            #cliente = Cliente.query.filter_by(identificacion=cedula).one()
+            cliente = db.session.query(Cliente).filter(Cliente.identificacion == cedula).one()
+
+            #cliente = db.session.query(db.where(Cliente.identificacion == cedula)).one()
+            
+            #user = User.query.filter_by(id=id, deleted=0).first()
+            print("cliente en el back:",cliente)
+            formatted_cliente = format_cliente(cliente)
+            
+            nombre1 = formatted_cliente['nombre1']
+            nombre2 = formatted_cliente['nombre2']
+            nombre1 = nombre1.lower()
             nombre2 = nombre2.lower()
-            nombrecompleto = nombre + " " + nombre2
+            nombrecompleto = nombre1 + " " + nombre2
             chatId = message.chat.id
             print("truesito pa")
             
@@ -293,7 +317,7 @@ def corroborar_cedula(message):
             # print("identificacionUsuario",identificacionUsuario)
             ### ANTES SERVIA CON ESTE GLOBAL:
             
-            IdentificacionU.identificacion= str(cedula)
+            #IdentificacionU.identificacion= str(cedula)
             
             
             #envia datos del bot al front
@@ -381,6 +405,13 @@ def corroborar_cedula(message):
         
             #preguntamos por la accion
             msg = bot.send_message(message.chat.id,"Necesitas algo mas?",reply_markup=markup)
+            
+            #Reinicia valores a los de defecto, para poder hacer otro pedido:
+            BanderaPedido.bandera = "False"
+            TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
+            TextoOrdUsuario.textoOrdenUsuario = '<u><b>Datos de la Orden:</b></u> \n'
+            #Reinicia valores a los de defecto
+            
             #msg = bot.send_message(message.chat.id,reply_markup=markup)
             bot.register_next_step_handler(msg,realizar_pedido)
             #esto funciona bello#
@@ -664,10 +695,29 @@ def guardar_datos_usuario(message):
     #r= requests.post("http://localhost:5000/cli/clientes",
     #r= requests.post("https://flask-web-bot-app.loca.lt/cli/clientes",
     #r= requests.post("https://flaskwebbotapp.pagekite.me/cli/clientes",
-    r= requests.post(f"{webURL}/cli/clientes",
-                     data=json.dumps(clienteNuevo),
-                     headers={"Content-Type": "application/json"})
-    print(r.text)
+    
+    cliente = Cliente(identificacion = usuarios[message.chat.id]["identificacion"] ,
+                      nombre1 = usuarios[message.chat.id]["nombre1"],
+                      nombre2=usuarios[message.chat.id]["nombre2"],
+                      apellido1=usuarios[message.chat.id]["apellido1"],
+                      apellido2=usuarios[message.chat.id]["apellido2"],
+                      nombrenegocio=usuarios[message.chat.id]["nombrenegocio"],
+                      direccion=usuarios[message.chat.id]["direccion"],
+                      correo=usuarios[message.chat.id]["correo"],
+                      celular=usuarios[message.chat.id]["celular"],
+                      barrio=usuarios[message.chat.id]["barrio"],
+                      ciudad=usuarios[message.chat.id]["ciudad"],
+                      creacion=usuarios[message.chat.id]["creacion"])
+    
+    db.session.add(cliente)
+    db.session.commit()
+    
+    # #comentado
+    # r= requests.post(f"{webURL}/cli/clientes",
+    #                  data=json.dumps(clienteNuevo),
+    #                  headers={"Content-Type": "application/json"})
+    # print(r.text)
+    # #comentado
     
     #cliente = requests.get(f"http://localhost:5000/cli/clientes/{cedula}") #funciona
     #cli = cliente.json()
@@ -1171,7 +1221,7 @@ def recibePedido():
     #    textoPedidoUsuario+= f'<code>Fecha max entrega:</code>{fechamaxentrega}\n'
     #    textoPedidoUsuario+= f'<code>Total a pagar:</code>{totalpagar}\n'
        
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Id pedido:</b></code>{idpedido}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>• Id pedido:</b></code>{idpedido}\n'
        TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Identificacion:</b></code>{identificacion}\n'
        TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Nombres:</b></code>{nombres}\n'
        TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Apellidos:</b></code>{apellidos}\n'
@@ -1188,19 +1238,23 @@ def recibePedido():
        ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
        ######## datos para tabla pedidos ########
        #ENSAYAR ESTO
-    #    pedidoCompleto = Pedido(nombres=nombres,apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,
-    #                            ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,
-    #                            fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
-    #    db.session.add(pedidoCompleto)
-    #    db.session.commit()
-    #    print("pedido agregado")
+       pedidoCompleto = Pedido(idpedido=idpedido,identificacion=identificacion,nombres=nombres,
+                               apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,
+                               ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,
+                               fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
+       db.session.add(pedidoCompleto)
+       db.session.commit()
+       print(pedidoCompleto)
+       print("pedido agregado")
+       #ENSAYAR ESTO
+       
        ######## datos para tabla pedidos ########
        
-       #guarda pedido del usuario en la BD:
-       p= requests.post(f"{webURL}/ped/pedidos",
-                        data=json.dumps(pedidofinal),
-                        headers={"Content-Type": "application/json"})
-       print(p.text)
+    #    #guarda pedido del usuario en la BD:
+    #    p= requests.post(f"{webURL}/ped/pedidos",
+    #                     data=json.dumps(pedidofinal),
+    #                     headers={"Content-Type": "application/json"})
+    #    print(p.text)
        
        #for para ir agregando cada orden con el mismo numero de pedido
        j=0
@@ -1224,19 +1278,32 @@ def recibePedido():
         #    textoOrdenUsuario+= f'<code>Precio X Cantidad:</code>{ordenfinal["precioxcantidad"]}\n'
            
            TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>• Id Orden:</b></code>{ordenfinal["idorden"]}\n'
-           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Descripcion del producto:</b></code>{ordenfinal["descripcion"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Id Pedido:</b></code>{ordenfinal["idpedido"]}\n'
            TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Codigo del producto:</b></code>{ordenfinal["codigo"]}\n'
+           TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Descripcion del producto:</b></code>{ordenfinal["descripcion"]}\n'
            TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Precio:</b></code>{ordenfinal["precio"]}\n'
            TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Cantidad:</b></code>{ordenfinal["cantidad"]}\n'
            TextoOrdUsuario.textoOrdenUsuario+= f'<code><b>Precio X Cantidad:</b></code>{ordenfinal["precioxcantidad"]}\n\n'
            
            ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+           
+           #ENSAYAR ESTO
+           orden = Orden(idorden=idorden,idpedido=idpedido,codigo=str(codigosproducto[j]),descripcion=descripciones[j],
+                         precio=precios[j],cantidad=cantidades[j],precioxcantidad=preciosxcantidad[j])
+           db.session.add(orden)
+           db.session.commit()
+           print(orden)
+           print("orden agregada")
+            #ENSAYAR ESTO
+           
+           
+           
            #guarda orden del usuario en la BD:
            #guarda pedido del usuario en la BD:
-           o= requests.post(f"{webURL}/ord/ordenes",
-                            data=json.dumps(ordenfinal),
-                            headers={"Content-Type": "application/json"})
-           print(o.text)
+        #    o= requests.post(f"{webURL}/ord/ordenes",
+        #                     data=json.dumps(ordenfinal),
+        #                     headers={"Content-Type": "application/json"})
+        #    print(o.text)
            idorden=idorden+1
            
            
