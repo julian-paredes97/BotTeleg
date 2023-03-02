@@ -7,9 +7,9 @@ class Orden(db.Model):  #carrito
     
     __tablename__="ordenes"
 
-    idorden = db.Column(db.Integer, primary_key=True)
-    idpedido = db.Column(db.Integer, db.ForeignKey("pedidos.idpedido"), nullable=False) #, ondelete="CASCADE"
-    codigo = db.Column(db.String, db.ForeignKey("productos.codigo"), nullable=False) #, ondelete="CASCADE"
+    idorden = db.Column(db.Integer, primary_key=True,autoincrement=True)
+    idpedido = db.Column(db.Integer, nullable=False)#, db.ForeignKey("pedidos.idpedido"), nullable=False) #, ondelete="CASCADE"
+    codigo = db.Column(db.String, nullable=False)# db.ForeignKey("productos.codigo"), nullable=False) #, ondelete="CASCADE"
     descripcion = db.Column(db.String)
     precio = db.Column(db.Integer)
     cantidad = db.Column(db.Integer)

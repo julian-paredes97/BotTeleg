@@ -7,8 +7,8 @@ class Pedido(db.Model):  #pedidos
     
     __tablename__="pedidos"
 
-    idpedido = db.Column(db.Integer, primary_key=True)
-    identificacion = db.Column(db.String, db.ForeignKey("clientes.identificacion"), nullable=False) #, ondelete="CASCADE"
+    idpedido = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    identificacion = db.Column(db.String, nullable=False)#, db.ForeignKey("clientes.identificacion"), nullable=False) #, ondelete="CASCADE"
     nombres = db.Column(db.String)
     apellidos = db.Column(db.String)
     nombrenegocio = db.Column(db.String)

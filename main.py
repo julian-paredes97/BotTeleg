@@ -24,6 +24,7 @@ from controladores.Cliente import mainC #, get_cliente, get_clientes
 from modelos.ModeloPedido import Pedido
 from modelos.ModeloOrden import Orden
 from modelos.ModeloCliente import Cliente
+from utils.db import db
 
 #import threading
 
@@ -1086,6 +1087,11 @@ def recibePedido():
        print("fechamaxentrega",fechamaxentrega)
        totalpagar=0
        
+       ######## datos para tabla pedidos ########
+       #ENSAYAR ESTO
+    #    pedidoCompleto = Pedido(nombres=nombres,apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,
+    #                            ciudad=ciudad,barrio=barrio,correo=correo,)
+       ######## datos para tabla pedidos ########
        
        
        ######## datos para tabla ordenes ########
@@ -1180,6 +1186,15 @@ def recibePedido():
        TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Total a pagar:</b></code>{totalpagar}\n'
        
        ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+       ######## datos para tabla pedidos ########
+       #ENSAYAR ESTO
+    #    pedidoCompleto = Pedido(nombres=nombres,apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,
+    #                            ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,
+    #                            fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
+    #    db.session.add(pedidoCompleto)
+    #    db.session.commit()
+    #    print("pedido agregado")
+       ######## datos para tabla pedidos ########
        
        #guarda pedido del usuario en la BD:
        p= requests.post(f"{webURL}/ped/pedidos",
