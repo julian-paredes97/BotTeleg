@@ -1,4 +1,5 @@
 /venv/*
+/utils/*
 /__pycache__/*
 /controladores/__pycache__/*
 /modelos/__pycache__/*

@@ -6,14 +6,11 @@ from telebot.types import ForceReply #para citar un mensaje
 from telebot.types import ReplyKeyboardRemove # para eliminar botones
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton , KeyboardButton #para los botones para abrir la webapp
 from telebot.types import MenuButtonWebApp, WebAppInfo #para los botones para abrir la webapp
-import datetime
-from datetime import datetime, timedelta
 import time
 import requests
 import json
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy #ORM para el manejo de la BD de PostgreSQL
-from sqlalchemy.sql import func
 from controladores.Producto import mainP
 from controladores.Orden import mainO
 from controladores.Pedido import mainPe
@@ -21,7 +18,7 @@ from controladores.Cliente import mainC
 from modelos.ModeloPedido import Pedido
 from modelos.ModeloOrden import Orden
 from modelos.ModeloCliente import Cliente , format_cliente
-from utils.db import db
+from controladores.Helpers import max_id_pedidos, max_id_ordenes , datos_cliente , TextoPedUsuario , fecha_actual, fecha_max_entrega
 
 
 #instanciamos el bot de telegram
@@ -37,58 +34,12 @@ db=SQLAlchemy(web_server)
 
 CORS(web_server)
 
-localtunnel = "https://flask-web-bot-app.loca.lt"
-pagekite = "https://flaskwebbotapp.pagekite.me/"
 
-webURL= localtunnel
+webURL= localtunnel     #variable que almacena la URL en la que se establecera el webhook
 
-pedidoCliente = "" #creo que se puede borrar tambien
-
-
-class UsuarioActual:
-    def __init__(self, chatid):
-        self.chatid = chatid
-        
-class IdentificacionU:
-    def __init__(self, identificacion):
-        self.identificacion = identificacion
-
-class BanderaPedido:
-    def __init__(self, bandera):
-        self.bandera = bandera
-
-class TextoPedUsuario:
-    def __init__(self, textoPedidoUsuario):
-        self.textoPedidoUsuario = textoPedidoUsuario
-class TextoOrdUsuario:
-    def __init__(self, textoOrdenUsuario):
-        self.textoOrdenUsuario = textoOrdenUsuario
-    
-
-IdentificacionU.identificacion = "0"
-BanderaPedido.bandera = "False"
-
-print("Inicializa identificacion en 0:",IdentificacionU.identificacion)
-print("Inicializa banderapedido en false:",BanderaPedido.bandera)
-# #variables globales en la que guardaremos los datos del pedido del usuario
-# textoPedidoUsuario = '<b>Datos Pedido:</b> \n'
-# textoOrdenUsuario =  '<b>Datos de la Orden:</b> \n'
+#Clase en la que guardaremos el texto con los datos del pedido del usuario
+#que posteriormente se enviara al proveedor:
 TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
-#TextoOrdUsuario.textoOrdenUsuario = '<u><b>Datos de la Orden:</b></u> \n'
-
-
-
-#Gestiona las peticiones POST enviadas al webhook
-#del bot en el servidor web:
-@web_server.route('/', methods=['POST'])
-def webhook():
-    #si el post recibido es un JSON:
-    if request.headers.get("content-type") == "application/json":
-        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
-        #print("update:",update)
-        bot.process_new_updates([update])
-        return "OK",200
-
 
 #variable global en la que guardaremos los datos de los usuarios que se van a registrar:
 usuarios = {}
@@ -96,8 +47,21 @@ usuarios = {}
 #variable global en la que guardaremos los datos de los usuarios activos y validados:
 usuariosAct = {}
 
-#posibles saludos por parte del usuario
-saludo=["hola","hey","buenas","buen dia","buena tarde","quisiera hacer un pedido","como esta","saludos"]
+#posibles saludos por parte del usuario:
+saludo=["hola","ola","hey","buenas","buen dia","buenos dias",
+        "buena tarde","buenas tardes","buena noche","buenas noches",
+        "quisiera hacer un pedido","como esta","saludos"]
+
+
+#Gestiona las peticiones o actualizaciones POST enviadas al webhook
+#del bot en el servidor web y las procesa:
+@web_server.route('/', methods=['POST'])
+def webhook():
+    #si el post recibido es un JSON:
+    if request.headers.get("content-type") == "application/json":
+        update = telebot.types.Update.de_json(request.stream.read().decode('utf-8'))
+        bot.process_new_updates([update])
+        return "OK",200
 
 
 #responde al comando /start :
@@ -107,7 +71,7 @@ def cmd_start(message):
     
     bot.send_message(message.chat.id,"Buen dia, se ha comunicado con Distri Romel Sas")
     
-    #definimos dos botones
+    #definimos tres botones
     markup= ReplyKeyboardMarkup(one_time_keyboard=True,
                                 input_field_placeholder="Pulsa un boton",
                                 resize_keyboard=True)
@@ -115,14 +79,30 @@ def cmd_start(message):
     #preguntamos por la accion
     msg = bot.send_message(message.chat.id, "Como podemos ayudarle?",reply_markup=markup)
     bot.register_next_step_handler(msg,realizar_pedido)
-    
 
 #responde a las entradas de texto:
 @bot.message_handler(content_types=["text"])
-#def cmd_alta(message):
+def saludo_inicial(message):
+    """ Muestra las acciones disponibles al iniciar una conversacion. """
+    
+    if message.text.lower() in saludo:
+        bot.send_message(message.chat.id,"Buen dia, se ha comunicado con Distri Romel Sas")
+    
+        #definimos dos botones
+        markup= ReplyKeyboardMarkup(one_time_keyboard=True,
+                                    input_field_placeholder="Pulsa un boton",
+                                    resize_keyboard=True)
+        markup.add("Realizar pedido","Ayuda","Salir")
+        #preguntamos por la accion
+        msg = bot.send_message(message.chat.id, "Como podemos ayudarle?",reply_markup=markup)
+        bot.register_next_step_handler(msg,realizar_pedido)
+
+
+
+#responde a las entradas de texto:
+@bot.message_handler(content_types=["text"])
 def realizar_pedido(message):
-    #"""Pregunta el nombre del usuario."""
-    """Pregunta la cedula del usuario."""
+    """Evalua que accion se va a ejecutar:"""
     
     if message.text.lower()=="realizar pedido":
         markup = ForceReply()  # para responder citado
@@ -137,7 +117,6 @@ def realizar_pedido(message):
        
         #preguntamos por la accion
         msg = bot.send_message(message.chat.id,"link de youtube con video explicativo",reply_markup=markup)
-        #msg = bot.send_message(message.chat.id,reply_markup=markup)
         bot.register_next_step_handler(msg,realizar_pedido)
     
     if message.text.lower()=="salir":
@@ -148,15 +127,13 @@ def realizar_pedido(message):
 #Corrobora que la cedula que se esta ingresando exista,
 #que sea un dato entero y que se encuentre en la BD:
 def corroborar_cedula(message):
-    #Verifica que el dato ingresado por el usuario sea un entero
-    #y que no contenga letras:
-    if not message.text.isdecimal():
+    #Verifica que el dato ingresado por el usuario sea un entero y que no contenga letras:
+    if not message.text.isnumeric():
         #informa error y se vuelve a preguntar
         msg = bot.send_message(message.chat.id, "ERROR: Debes indicar un numero valido. \n cual es tu cedula?") #,reply_markup=markup)
         bot.register_next_step_handler(msg,corroborar_cedula)
     
-    
-    if message.text.isdecimal():
+    if message.text.isnumeric():
         
         cedula= message.text
         bot.send_message(message.chat.id, "Validando informacion...")
@@ -175,9 +152,7 @@ def corroborar_cedula(message):
 
             print("AL VERIFICAR QUE EXISTE LA CEDULA:",cedula)
             
-            
             print("entre")
-            
             
             #Trae todos los datos del cliente de la BD:
             cliente = db.session.query(Cliente).filter(Cliente.identificacion == cedula).one()
@@ -195,10 +170,8 @@ def corroborar_cedula(message):
             #guarda datos del cliente y el id de la conversacion con el bot
             datosAlmacenar = {"chatId":str(chatId),"identificacion":str(cedula)}
             
-            
             print("truesito pa")
-                       
-            
+                    
             #envia datos del cliente y del bot para almacenarlos en un diccionario
             req= requests.post("https://flask-web-bot-app.loca.lt/botdata",
             data = json.dumps(datosAlmacenar), 
@@ -206,13 +179,11 @@ def corroborar_cedula(message):
             print(req.text)
             print("###############################################")
             
-            
             #####   ABRIR WEBAPP:   #####
             web_app_url = "https://regal-meerkat-6adcf2.netlify.app"
             keyboard = telebot.types.InlineKeyboardMarkup()
-            #crear otro boton para poder hacer el callback
             markup2=telebot.types.InlineKeyboardButton(text="REALIZAR PEDIDO :)",web_app=WebAppInfo(url=web_app_url))
-            keyboard.add(markup2)
+            keyboard.add(markup2) #se añade boton inline que permitira abrir la WebApp
             msg=bot.send_message(message.chat.id, text=f"Hola {nombrecompleto}, que vas a pedir el dia de hoy?", reply_markup=keyboard)
             print("ABER EL MSG:",msg)
             #####   ABRIR WEBAPP:   #####
@@ -334,13 +305,7 @@ def guardar_datos_usuario(message):
     ciudad = message.text
     print("ciudad:",ciudad)
     
-    #para la fecha de creacion:
-    now = datetime.now()
-    date_time = now.strftime("%y-%m-%d")
-    fecha= date_time
-    print("fecha:",fecha)
-    print("tipo de la fecha:",type(fecha))
-    
+    fecha= fecha_actual()           #Se obtiene la fecha actual
     
     usuarios[message.chat.id]["ciudad"] = ciudad
     usuarios[message.chat.id]["creacion"] = fecha
@@ -397,21 +362,6 @@ def guardar_datos_usuario(message):
     #preguntamos por la accion:
     msg = bot.send_message(message.chat.id,"Necesitas algo mas?",reply_markup=markup)
     bot.register_next_step_handler(msg,realizar_pedido)
-  
-
-def max_id_pedidos():
-    result = db.session.query(func.max(Pedido.idpedido)).scalar()
-    return result
-
-def max_id_ordenes():
-    result = db.session.query(func.max(Orden.idorden)).scalar()
-    return result
-
-def datos_cliente(identificacion):
-    cli = db.session.query(Cliente).filter(
-        Cliente.identificacion == str(identificacion)
-    ).first()
-    return cli
 
 
 #almacena datos del usuario y del bot para
@@ -444,7 +394,6 @@ async def recibePedido():
     
     if request.method == 'POST':
        print("WEEEEEE")
-       #pedidos = request.data
        req = request.get_json(silent=True, force=True) #ensayar con esto
        res = json.dumps(req, indent=4)
        print(res)
@@ -457,7 +406,6 @@ async def recibePedido():
        identificacion = 0
        nombrenegocio = ""
        
-       #####################################
        chatID = ped["datosUsuario"]["id"]
        chatID = str(chatID)
        print("ABER_CHATID:",chatID)
@@ -487,14 +435,8 @@ async def recibePedido():
        celular = datoscliente.celular
        print("celular:",celular)
        
-       #para sacar las fechas:
-       now = datetime.now()
-       date_time = now.strftime("%y-%m-%d")
-       fechapedido= date_time
-       print("fechapedido:",fechapedido)
-       fechamaxentrega= now + timedelta(days=1)
-       fechamaxentrega= fechamaxentrega.strftime("%y-%m-%d")
-       print("fechamaxentrega",fechamaxentrega)
+       fechapedido = fecha_actual()                 #se obtiene la fecha actual
+       fechamaxentrega = fecha_max_entrega()        #se obtiene la fecha maxima de entrega (1 dia mas)
        totalpagar=0
        
        ######## datos para tabla pedidos ########
@@ -504,7 +446,6 @@ async def recibePedido():
        codigosproducto=[]
        descripciones=[]
        precios=[]
-       
        
        for i in ped:
            cantidad=0
@@ -574,8 +515,7 @@ async def recibePedido():
        print("max id ordenes:",maxIdOrden)
        idorden = maxIdOrden + 1
     
-       
-       #for para ir agregando cada orden con el mismo numero de pedido
+       #for para ir agregando cada orden con el mismo numero de pedido:
        j=0
        tam=len(codigosproducto)
        while(j<tam):
@@ -601,7 +541,7 @@ async def recibePedido():
            TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Cantidad:</b></code>{ordenfinal["cantidad"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Precio X Cantidad:</b></code>{ordenfinal["precioxcantidad"]}\n\n'
 
-           ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
+           ######## Datos que se insertaran en la tabla ordenes: ########
            
            orden = Orden(idpedido=idpedido,codigo=str(codigosproducto[j]),descripcion=descripciones[j],
                          precio=precios[j],cantidad=cantidades[j],precioxcantidad=preciosxcantidad[j])
@@ -619,8 +559,7 @@ async def recibePedido():
                bot.send_message(-860836322, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")
                #Se reinicia el texto del pedido, para asi poder tomar uno nuevo:
                TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
-               
-               
+    
                
        print("PedidoListo")
        msgid = usuariosAct[chatID]["chatid"]
@@ -649,7 +588,6 @@ async def recibePedido():
         return "pedido no recibido"
 
 
-
 # MAIN:
 if __name__ == '__main__':
     
@@ -658,7 +596,6 @@ if __name__ == '__main__':
     web_server.register_blueprint(mainO, url_prefix='/ord')   #orden
     web_server.register_blueprint(mainPe, url_prefix='/ped')   #pedido
     web_server.register_blueprint(mainC, url_prefix='/cli')   #clientes
-    #web_server.register_blueprint(mainPet, url_prefix='/pet')   #peticiones
     
     print("INICIANDO BOT...")
     

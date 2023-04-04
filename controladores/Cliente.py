@@ -1,5 +1,4 @@
-#from app import db
-from utils.db import db
+from config import db
 
 from modelos.ModeloCliente import Cliente , format_cliente
 from flask import request, Blueprint
@@ -9,10 +8,6 @@ mainC = Blueprint('cliente_blueprint', __name__)
 @mainC.route('/cliente')
 def index():
     return "WEEEEEEEE"
-
-#@app.route('/')
-#def hello():
-#    return 'hey!'
 
 #crear un cliente
 @mainC.route('/clientes',methods=['GET', 'POST'])
@@ -51,9 +46,8 @@ def get_clientes():
     return {'clientes':cli_lista}
 
 #traer un cliente
-@mainC.route('/clientes/<identificacion>',methods=['GET'])  #era id
+@mainC.route('/clientes/<identificacion>',methods=['GET'])
 def get_cliente(identificacion):
-    #ex = Cliente.query.filter_by(identificacion=identificacion).exists()
     exists = db.session.query(db.exists().where(Cliente.identificacion == identificacion)).scalar()
     exists = str(exists)
     print("existe o no:",exists)
@@ -64,26 +58,19 @@ def get_cliente(identificacion):
         return {'event':formatted_cliente,'exists':exists}
     else:
         return {'exists':exists}
-    
-    # cliente = Cliente.query.filter_by(identificacion=identificacion).one()
-    # print("cliente en el back:",cliente)
-    # formatted_cliente = format_cliente(cliente)
-    # return {'event':formatted_cliente}
 
 #borrar un cliente
-@mainC.route('/clientes/<identificacion>',methods=['DELETE']) #era id
+@mainC.route('/clientes/<identificacion>',methods=['DELETE'])
 def delete_cliente(identificacion):
     cliente = Cliente.query.filter_by(identificacion=identificacion).one()
     db.session.delete(cliente)
     db.session.commit()
-    #return 'Event deleted!'
     return f'Cliente (identificacion: {identificacion}) Eliminado!'
 
 #editar cliente
-@mainC.route('/clientes/<identificacion>',methods=['PUT']) #era id
+@mainC.route('/clientes/<identificacion>',methods=['PUT'])
 def update_cliente(identificacion):
     cliente=Cliente.query.filter_by(identificacion=identificacion)
-    #identificacion = request.json['identificacion']
     nombre1 = request.json['nombre1']
     nombre2 = request.json['nombre2']
     apellido1 = request.json['apellido1']

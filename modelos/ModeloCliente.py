@@ -1,6 +1,4 @@
-#from app import db
-#from matplotlib import image
-from utils.db import db
+from config import db
 
 class Cliente(db.Model):
     
@@ -18,13 +16,6 @@ class Cliente(db.Model):
     barrio=db.Column(db.String)
     ciudad=db.Column(db.String)
     creacion= db.Column(db.String)
-    
-    #chatid = db.Column(db.String)
-    #id=db.Column(db.Integer, primary_key=True)
-    #categoria=db.Column(db.String(50))
-    #descripcion=db.Column(db.String(50))
-    #precio=db.Column(db.Integer)
-    #cantidad=db.Column(db.Integer)
     
     def __repr__(self):
         return f"Cliente: {self.identificacion,self.nombre1,self.nombre2,self.apellido1,self.apellido2,self.nombrenegocio,self.direccion,self.correo,self.celular,self.barrio,self.ciudad,self.creacion}"

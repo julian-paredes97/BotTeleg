@@ -1,6 +1,4 @@
-#from app import db
-#from matplotlib import image
-from utils.db import db
+from config import db
 
 class Producto(db.Model):
     
@@ -12,12 +10,6 @@ class Producto(db.Model):
     precio=db.Column(db.Integer)
     cantidad=db.Column(db.Integer)
     imagen= db.Column(db.String)
-
-    #id=db.Column(db.Integer, primary_key=True)
-    #categoria=db.Column(db.String(50))
-    #descripcion=db.Column(db.String(50))
-    #precio=db.Column(db.Integer)
-    #cantidad=db.Column(db.Integer)
     
     def __repr__(self):
         return f"Producto: {self.codigo,self.categoria,self.descripcion,self.precio,self.cantidad,self.imagen}"

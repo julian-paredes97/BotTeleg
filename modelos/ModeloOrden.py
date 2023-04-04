@@ -1,13 +1,9 @@
-#from app import db
-#from ModeloProducto import Producto
-from utils.db import db
+from config import db
 from sqlalchemy import text
 
 def max_id_ordenes():
     
     r = text("(SELECT MAX(idorden) + 1 FROM ordenes)")
-    # result = db.session.query(func.max(Pedido.idpedido)).scalar()
-    # return (result + 1)
     return r
 
 
@@ -25,16 +21,7 @@ class Orden(db.Model):  #carrito
     
     def __repr__(self):
         return f"Orden: {self.idpedido,self.codigo,self.descripcion,self.precio,self.cantidad,self.precioxcantidad}"
-        #return f"Orden: {self.idorden,self.idpedido,self.codigo,self.descripcion,self.precio,self.cantidad,self.precioxcantidad}"
-    
-    # def __init__(self,idorden,idpedido,codigo,descripcion,precio,cantidad,precioxcantidad):
-    #     self.idorden = idorden
-    #     self.idpedido = idpedido
-    #     self.codigo = codigo
-    #     self.descripcion = descripcion
-    #     self.precio = precio
-    #     self.cantidad = cantidad
-    #     self.precioxcantidad = precioxcantidad
+        
    
 def format_orden(orden):
     return{

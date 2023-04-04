@@ -1,2 +1,6 @@
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
 TELEGRAM_TOKEN = "5489576102:AAEppJsThPctLwr4iEp9C5iyGMMdd9JHUXk"
-NGROK_TOKEN = "2KPvGChkJll7X009ehecBEGQDkL_6SbRa6jaE7rb573TqVBk8"
+localtunnel = "https://flask-web-bot-app.loca.lt"
