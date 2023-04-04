@@ -180,7 +180,7 @@ def corroborar_cedula(message):
             print("###############################################")
             
             #####   ABRIR WEBAPP:   #####
-            web_app_url = "https://regal-meerkat-6adcf2.netlify.app"
+            web_app_url = "https://inquisitive-puffpuff-273fd1.netlify.app"
             keyboard = telebot.types.InlineKeyboardMarkup()
             markup2=telebot.types.InlineKeyboardButton(text="REALIZAR PEDIDO :)",web_app=WebAppInfo(url=web_app_url))
             keyboard.add(markup2) #se añade boton inline que permitira abrir la WebApp
