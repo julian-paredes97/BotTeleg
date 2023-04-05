@@ -185,7 +185,7 @@ def corroborar_cedula(message):
             markup2=telebot.types.InlineKeyboardButton(text="REALIZAR PEDIDO :)",web_app=WebAppInfo(url=web_app_url))
             keyboard.add(markup2) #se añade boton inline que permitira abrir la WebApp
             msg=bot.send_message(message.chat.id, text=f"Hola {nombrecompleto}, que vas a pedir el dia de hoy?", reply_markup=keyboard)
-            print("ABER EL MSG:",msg)
+            print("MSG:",msg)
             #####   ABRIR WEBAPP:   #####
             
 # En caso que el usuario no existe se piden los
@@ -381,9 +381,9 @@ async def datosbot():
         
         
         print("llamado del back:")
-        print("ABER QUE CHUCHAS:",data)
-        print("ABER QUE CHUCHAS:",chatid)
-        print("ABER QUE CHUCHAS:",identificacion)
+        print("Data:",data)
+        print("chatid:",chatid)
+        print("identificacion:",identificacion)
         
         return data
         
@@ -408,7 +408,7 @@ async def recibePedido():
        
        chatID = ped["datosUsuario"]["id"]
        chatID = str(chatID)
-       print("ABER_CHATID:",chatID)
+       print("CHATID:",chatID)
        print("USUARIOSACTIVOS:",usuariosAct)
        
        if usuariosAct[chatID]:
