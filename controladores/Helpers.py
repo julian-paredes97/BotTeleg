@@ -3,7 +3,6 @@ from sqlalchemy.sql import func
 from config import db
 from modelos.ModeloPedido import Pedido
 from modelos.ModeloOrden import Orden
-from modelos.ModeloCliente import Cliente
 import datetime
 from datetime import datetime, timedelta
 
@@ -42,10 +41,3 @@ def max_id_pedidos():
 def max_id_ordenes():
     result = db.session.query(func.max(Orden.idorden)).scalar()
     return result
-
-#funcion que permite traer los datos del cliente a partir de su id:
-def datos_cliente(identificacion):
-    cli = db.session.query(Cliente).filter(
-        Cliente.identificacion == str(identificacion)
-    ).first()
-    return cli

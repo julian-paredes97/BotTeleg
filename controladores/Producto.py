@@ -29,7 +29,7 @@ def crear_producto():
 #traer todos los productos
 @mainP.route('/productos',methods=['GET'])
 def get_productos():
-    productos=Producto.query.order_by(Producto.codigo.asc()).all()
+    productos = Producto.query.order_by(Producto.codigo.asc()).all()
     prod_lista=[]
     for prod in productos:
         prod_lista.append(format_producto(prod))
@@ -53,7 +53,7 @@ def delete_producto(codigo):
 #editar producto
 @mainP.route('/productos/<codigo>',methods=['PUT'])
 def update_producto(codigo):
-    producto=Producto.query.filter_by(codigo=codigo)
+    producto = Producto.query.filter_by(codigo=codigo)
     categoria = request.json['categoria']
     descripcion = request.json['descripcion']
     precio = request.json['precio']
@@ -62,3 +62,11 @@ def update_producto(codigo):
     producto.update(dict(categoria=categoria,descripcion=descripcion,precio=precio,cantidad=cantidad,imagen=imagen))
     db.session.commit()
     return {'event':format_producto(producto.one())}
+
+#funcion que permite editar la cantidad de un producto
+def update_cantidad_producto(codigo,cantidadRestar):
+    producto = Producto.query.filter_by(codigo=codigo).one()
+    cantidadVieja = producto.cantidad
+    producto.cantidad = cantidadVieja - cantidadRestar
+    db.session.commit()
+    return producto

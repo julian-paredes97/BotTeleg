@@ -90,3 +90,10 @@ def update_cliente(identificacion):
                       celular=celular,barrio=barrio,ciudad=ciudad,creacion=creacion))
     db.session.commit()
     return {'event':format_cliente(cliente.one())}
+
+#funcion que permite traer los datos del cliente a partir de su id:
+def datos_cliente(identificacion):
+    cli = db.session.query(Cliente).filter(
+        Cliente.identificacion == str(identificacion)
+    ).first()
+    return cli

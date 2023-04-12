@@ -11,14 +11,14 @@ import requests
 import json
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy #ORM para el manejo de la BD de PostgreSQL
-from controladores.Producto import mainP
+from controladores.Producto import mainP , get_productos, update_cantidad_producto
 from controladores.Orden import mainO
 from controladores.Pedido import mainPe
-from controladores.Cliente import mainC
+from controladores.Cliente import mainC , datos_cliente
 from modelos.ModeloPedido import Pedido
 from modelos.ModeloOrden import Orden
 from modelos.ModeloCliente import Cliente , format_cliente
-from controladores.Helpers import max_id_pedidos, max_id_ordenes , datos_cliente , TextoPedUsuario , fecha_actual, fecha_max_entrega
+from controladores.Helpers import max_id_pedidos, max_id_ordenes , TextoPedUsuario , fecha_actual, fecha_max_entrega
 
 
 #instanciamos el bot de telegram
@@ -187,6 +187,17 @@ def corroborar_cedula(message):
             msg=bot.send_message(message.chat.id, text=f"Hola {nombrecompleto}, que vas a pedir el dia de hoy?", reply_markup=keyboard)
             print("MSG:",msg)
             #####   ABRIR WEBAPP:   #####
+            
+        if exists == "False":
+            """almacena la nueva cedula y pregunta nombres del usuario."""
+            print("entre")
+            
+            usuarios[message.chat.id]={}
+            usuarios[message.chat.id]["identificacion"]=message.text
+            markup = ForceReply()  # para responder citado
+            bot.send_message(message.chat.id, "No te encuentras registado en nuestra base de datos, por favor ingresa los siguientes datos personales:")
+            msg = bot.send_message(message.chat.id, "Nombre completo (ej: Juan David):",reply_markup=markup)
+            bot.register_next_step_handler(msg,preguntar_primer_nombre)
             
 # En caso que el usuario no existe se piden los
 # siguientes datos para almacenarlo en la BD:
@@ -401,6 +412,16 @@ async def recibePedido():
        pedidoCliente = ped
        print("pedido:\n",pedidoCliente)
        
+       #### PRODUCTOS: ######
+       
+       #Trae los productos que hay actualmente en la BD:
+       productosActuales = get_productos()
+       productosActuales = productosActuales["productos"]
+       print("productosActuales:\n", productosActuales)
+       
+       
+       #### PRODUCTOS: ######
+       
        
        ######## datos para tabla pedidos ########
        identificacion = 0
@@ -439,13 +460,15 @@ async def recibePedido():
        fechamaxentrega = fecha_max_entrega()        #se obtiene la fecha maxima de entrega (1 dia mas)
        totalpagar=0
        
-       ######## datos para tabla pedidos ########
+       ######## datos para tabla pedidos y ordenes ########
     
        cantidades=[]
        preciosxcantidad=[]
        codigosproducto=[]
        descripciones=[]
        precios=[]
+       #datos para comparar con los de lea BD:
+       sinStock = []
        
        for i in ped:
            cantidad=0
@@ -453,24 +476,45 @@ async def recibePedido():
            codigoproducto=0
            descripcion=""
            precioprod=0
+           #datos para comparar con los de la BD:
+           cantidadBD = 0
 
            if i.isdigit():
+               
                cantidad = ped[i]["cantidad"]
-               cantidades.append(cantidad)
-               
                precioprod = ped[i]["precio"]
-               precios.append(precioprod)
-               
                precioxcantidad = cantidad*precioprod
-               preciosxcantidad.append(precioxcantidad)
-               
                codigoproducto = ped[i]["codigo"]
-               codigosproducto.append(codigoproducto)
-               
                descripcion = ped[i]["descripcion"]
-               descripciones.append(descripcion)
                
-               totalpagar = totalpagar + precioxcantidad
+               #For que permite validar la cantidad de productos disponibles en la BD:
+               for j in productosActuales:
+                   if j["codigo"] == codigoproducto:
+                       cantidadBD = j["cantidad"]
+                       
+                       if cantidadBD < 100:
+                           #Se envia mensaje al grupo de Telegram del proveedor para avisar que hay escasez de X producto:
+                           bot.send_message(-860836322,text=f"<b>• Hay pocas unidades de {descripcion}, codigo del producto: {codigoproducto}</b>", parse_mode="html")
+                       
+                       if ((cantidad > cantidadBD) or (cantidadBD == 0)): 
+                           #coloca todo en 0s para que no cuente en el pedido, ya que no esta disponible
+                           print("No hay en stock")
+                           cantidades.append(0)
+                           precios.append(0)
+                           preciosxcantidad.append(0)
+                           codigosproducto.append(codigoproducto)
+                           sinStock.append(codigoproducto)
+                           descripciones.append(descripcion)
+                           totalpagar = totalpagar + 0
+
+                       if cantidadBD >= cantidad:
+                           update_cantidad_producto(codigoproducto,cantidad) #resta en la BD la cantidad en stock
+                           cantidades.append(cantidad)
+                           precios.append(precioprod)
+                           preciosxcantidad.append(precioxcantidad)
+                           codigosproducto.append(codigoproducto)
+                           descripciones.append(descripcion)
+                           totalpagar = totalpagar + precioxcantidad
        
        print("cantidades",cantidades)
        print("preciosxcantidad",preciosxcantidad)
@@ -496,19 +540,19 @@ async def recibePedido():
        idpedido = maxIdPedido
     
        ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR: ############   
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>• Id pedido:</b></code>{idpedido}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Identificacion:</b></code>{identificacion}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Nombres:</b></code>{nombres}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Apellidos:</b></code>{apellidos}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Nombre negocio:</b></code>{nombrenegocio}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Direccion:</b></code>{direccion}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Ciudad:</b></code>{ciudad}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Barrio:</b></code>{barrio}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Correo:</b></code>{correo}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Celular:</b></code>{celular}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Fecha pedido:</b></code>{fechapedido}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Fecha max entrega:</b></code>{fechamaxentrega}\n'
-       TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Total a pagar:</b></code>{totalpagar}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>• Id pedido: </b>{idpedido}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Identificacion: </b>{identificacion}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Nombres: </b>{nombres}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Apellidos: </b>{apellidos}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Nombre negocio: </b>{nombrenegocio}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Direccion: </b>{direccion}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Ciudad: </b>{ciudad}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Barrio: </b>{barrio}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Correo: </b>{correo}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Celular: </b>{celular}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Fecha pedido: </b>{fechapedido}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Fecha max entrega: </b>{fechamaxentrega}\n'
+       TextoPedUsuario.textoPedidoUsuario+= f'<b>Total a pagar: $</b>{totalpagar}\n'
     
        #Calcula maximo id de las ordenes:
        maxIdOrden = max_id_ordenes()            #para poder incrementar el id en la bd
@@ -519,27 +563,36 @@ async def recibePedido():
        j=0
        tam=len(codigosproducto)
        while(j<tam):
+           
            ordenfinal={}
+           codigoProd = str(codigosproducto[j])
+           
            ordenfinal["idorden"] = idorden
            ordenfinal["idpedido"] = idpedido
-           ordenfinal["codigo"] = str(codigosproducto[j])
+           ordenfinal["codigo"] = codigoProd
            ordenfinal["descripcion"] = descripciones[j]
            ordenfinal["precio"] = precios[j]
            ordenfinal["cantidad"] = cantidades[j]
            ordenfinal["precioxcantidad"] = preciosxcantidad[j]
+           
            ############ DATOS QUE SE VAN A ENVIAR AL PROVEEDOR ############
-        
+           
            if(j==0):
                TextoPedUsuario.textoPedidoUsuario += '\n<u><b>------------------</b></u> \n\n'
                TextoPedUsuario.textoPedidoUsuario += '<u><b>Datos de la Orden:</b></u> \n'
            
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>• Id Orden:</b></code>{ordenfinal["idorden"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Id Pedido:</b></code>{ordenfinal["idpedido"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Codigo del producto:</b></code>{ordenfinal["codigo"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Descripcion del producto:</b></code>{ordenfinal["descripcion"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Precio:</b></code>{ordenfinal["precio"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Cantidad:</b></code>{ordenfinal["cantidad"]}\n'
-           TextoPedUsuario.textoPedidoUsuario+= f'<code><b>Precio X Cantidad:</b></code>{ordenfinal["precioxcantidad"]}\n\n'
+           if codigoProd in sinStock:
+               print("codigoProd:",codigoProd)
+               print("sinStock:",sinStock)
+               TextoPedUsuario.textoPedidoUsuario+= f'<b>- En el momento no tenemos disponible este producto:</b>\n'
+           
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>• Id Orden: </b>{ordenfinal["idorden"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Id Pedido: </b>{ordenfinal["idpedido"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Codigo del producto: </b>{ordenfinal["codigo"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Descripcion del producto: </b>{ordenfinal["descripcion"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Precio: $</b>{ordenfinal["precio"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Cantidad: </b>{ordenfinal["cantidad"]}\n'
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>Precio X Cantidad: $</b>{ordenfinal["precioxcantidad"]}\n\n'
 
            ######## Datos que se insertaran en la tabla ordenes: ########
            
@@ -555,16 +608,19 @@ async def recibePedido():
            j=j+1
            
            if(j>=tam):
+               print("PedidoListo")
+               msgid = usuariosAct[chatID]["chatid"]
+               print("msgid:",msgid)
+               
                #Se envia mensaje al grupo de Telegram del proveedor con el pedido correspondiente:
                bot.send_message(-860836322, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")
+               #Se envia mensaje al cliente con el pedido correspondiente:
+               bot.send_message(msgid, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")
+               bot.send_message(msgid, "<u><b>Pedido realizado con exito!</b></u>",parse_mode="html")
                #Se reinicia el texto del pedido, para asi poder tomar uno nuevo:
                TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
     
                
-       print("PedidoListo")
-       msgid = usuariosAct[chatID]["chatid"]
-       print("msgid:",msgid)
-       bot.send_message(msgid, "<u><b>Pedido realizado con exito!</b></u>",parse_mode="html")
         
        markup= ReplyKeyboardMarkup(one_time_keyboard=True,
                                    input_field_placeholder="Pulsa un boton",
