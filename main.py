@@ -115,8 +115,14 @@ def realizar_pedido(message):
                                     resize_keyboard=True)
         markup.add("Realizar pedido","Salir")
        
-        #preguntamos por la accion
-        msg = bot.send_message(message.chat.id,"link de youtube con video explicativo",reply_markup=markup)
+        #videos de ayuda para el cliente:
+        textoayuda1 = f'<b>¿Cómo registrarse?: </b>\n'
+        textoayuda1 += f'https://youtu.be/xCOB9ThNJok \n'
+        textoayuda2 = f'<b>¿Cómo realizar un pedido?: </b>\n'
+        textoayuda2 += f'https://youtu.be/wXy3EbPLhzw \n'
+        
+        msg = bot.send_message(message.chat.id,textoayuda1, parse_mode="html",reply_markup=markup)
+        msg = bot.send_message(message.chat.id,textoayuda2, parse_mode="html",reply_markup=markup)
         bot.register_next_step_handler(msg,realizar_pedido)
     
     if message.text.lower()=="salir":
