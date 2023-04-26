@@ -2,12 +2,18 @@ from flask_sqlalchemy import SQLAlchemy #ORM para el manejo de la BD de PostgreS
 from sqlalchemy.sql import func
 from config import db
 from modelos.ModeloPedido import Pedido
-from modelos.ModeloOrden import Orden
+from modelos.ModeloProductosxPedido import ProductoxPedido
 import datetime
 from datetime import datetime, timedelta
 
 #Clase en la que guardaremos el texto con los datos del pedido del usuario
-#que posteriormente se enviara al proveedor:
+#que posteriormente se enviaran al cliente:
+class TextoPedcliente:
+    def __init__(self, textoPedidoCliente):
+        self.textoPedidoCliente = textoPedidoCliente
+
+#Clase en la que guardaremos el texto con los datos del pedido del usuario
+#que posteriormente se enviaran al proveedor:
 class TextoPedUsuario:
     def __init__(self, textoPedidoUsuario):
         self.textoPedidoUsuario = textoPedidoUsuario
@@ -38,6 +44,6 @@ def max_id_pedidos():
     return result
 
 #funcion para calcular el maximo id de la tabla ordenes:
-def max_id_ordenes():
-    result = db.session.query(func.max(Orden.idorden)).scalar()
+def max_id_productosxpedido():
+    result = db.session.query(func.max(ProductoxPedido.idproductoxpedido)).scalar()
     return result

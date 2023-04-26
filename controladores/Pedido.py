@@ -8,25 +8,17 @@ mainPe = Blueprint('pedido_blueprint', __name__)
 
 @mainPe.route('/pedido')
 def index():
-    return "WEEEEEEEE"
+    return "Endpoint pedido"
 
 #crear un pedido
 @mainPe.route('/pedidos',methods=['POST'])
 def crear_pedido():
     idpedido = request.json['idpedido']
     identificacion = request.json['identificacion']
-    nombres = request.json['nombres']
-    apellidos = request.json['apellidos']
-    nombrenegocio = request.json['nombrenegocio']
-    direccion = request.json['direccion']
-    ciudad = request.json['ciudad']
-    barrio = request.json['barrio']
-    correo = request.json['correo']
-    celular = request.json['celular']
     fechapedido = request.json['fechapedido']
     fechamaxentrega = request.json['fechamaxentrega']
     totalpagar= request.json['totalpagar']
-    pedido = Pedido(idpedido=idpedido,identificacion=identificacion,nombres=nombres,apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
+    pedido = Pedido(idpedido=idpedido,identificacion=identificacion,fechapedido=fechapedido,fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
     db.session.add(pedido)
     db.session.commit()
     
@@ -61,18 +53,10 @@ def delete_pedido(idpedido):
 def update_pedido(idpedido):
     pedido = Pedido.query.filter_by(idpedido=idpedido)
     identificacion = request.json['identificacion']
-    nombres = request.json['nombres']
-    apellidos = request.json['apellidos']
-    nombrenegocio = request.json['nombrenegocio']
-    direccion = request.json['direccion']
-    ciudad = request.json['ciudad']
-    barrio = request.json['barrio']
-    correo = request.json['correo']
-    celular = request.json['celular']
     fechapedido = request.json['fechapedido']
     fechamaxentrega = request.json['fechamaxentrega']
     totalpagar= request.json['totalpagar']
     
-    pedido.update(dict(identificacion=identificacion,nombres=nombres,apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,fechamaxentrega=fechamaxentrega,totalpagar=totalpagar))
+    pedido.update(dict(identificacion=identificacion,fechapedido=fechapedido,fechamaxentrega=fechamaxentrega,totalpagar=totalpagar))
     db.session.commit()
     return {'event':format_pedido(pedido.one())}

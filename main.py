@@ -12,13 +12,13 @@ import json
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy #ORM para el manejo de la BD de PostgreSQL
 from controladores.Producto import mainP , get_productos, update_cantidad_producto
-from controladores.Orden import mainO
+from controladores.ProductosxPedido import mainPxP
 from controladores.Pedido import mainPe
 from controladores.Cliente import mainC , datos_cliente
 from modelos.ModeloPedido import Pedido
-from modelos.ModeloOrden import Orden
+from modelos.ModeloProductosxPedido import ProductoxPedido
 from modelos.ModeloCliente import Cliente , format_cliente
-from controladores.Helpers import max_id_pedidos, max_id_ordenes , TextoPedUsuario , fecha_actual, fecha_max_entrega
+from controladores.Helpers import max_id_pedidos, max_id_productosxpedido , TextoPedUsuario , TextoPedcliente, fecha_actual, fecha_max_entrega
 
 
 #instanciamos el bot de telegram
@@ -38,7 +38,10 @@ CORS(web_server)
 webURL= localtunnel     #variable que almacena la URL en la que se establecera el webhook
 
 #Clase en la que guardaremos el texto con los datos del pedido del usuario
-#que posteriormente se enviara al proveedor:
+#que posteriormente se enviaran al cliente:
+TextoPedcliente.textoPedidoCliente = '<u><b>Datos Pedido:</b></u> \n'
+#Clase en la que guardaremos el texto con los datos del pedido del usuario
+#que posteriormente se enviaran al proveedor:
 TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
 
 #variable global en la que guardaremos los datos de los usuarios que se van a registrar:
@@ -75,7 +78,7 @@ def cmd_start(message):
     markup= ReplyKeyboardMarkup(one_time_keyboard=True,
                                 input_field_placeholder="Pulsa un boton",
                                 resize_keyboard=True)
-    markup.add("Realizar pedido","Ayuda","Salir")
+    markup.add("Realizar pedido","Contactenos","Ayuda","Salir")
     #preguntamos por la accion
     msg = bot.send_message(message.chat.id, "Como podemos ayudarle?",reply_markup=markup)
     bot.register_next_step_handler(msg,realizar_pedido)
@@ -92,7 +95,7 @@ def saludo_inicial(message):
         markup= ReplyKeyboardMarkup(one_time_keyboard=True,
                                     input_field_placeholder="Pulsa un boton",
                                     resize_keyboard=True)
-        markup.add("Realizar pedido","Ayuda","Salir")
+        markup.add("Realizar pedido","Contactenos","Ayuda","Salir")
         #preguntamos por la accion
         msg = bot.send_message(message.chat.id, "Como podemos ayudarle?",reply_markup=markup)
         bot.register_next_step_handler(msg,realizar_pedido)
@@ -108,6 +111,30 @@ def realizar_pedido(message):
         markup = ForceReply()  # para responder citado
         msg = bot.send_message(message.chat.id,"Por favor ingrese su numero de cedula", reply_markup=markup)
         bot.register_next_step_handler(msg,corroborar_cedula)
+        
+    if message.text.lower()=="contactenos":
+        
+        markup= ReplyKeyboardMarkup(one_time_keyboard=True,
+                                    input_field_placeholder="Pulsa un boton",
+                                    resize_keyboard=True)
+        markup.add("Realizar pedido","Salir")
+        
+        #enviar mensaje con informacion del proveedor:
+        
+        textContacto = f'<b>Encuentranos en Instagram como:</b> @distriromel\n'
+        textContacto += f'<b>Nuestros horarios de atencion son:</b>\n'
+        textContacto += f'-Lunes a Viernes de 7:00-16:30\n'
+        textContacto += f'-Sabados de 7:00-15:00\n'
+        textContacto += f'<b>Nos encontramos ubicados en:</b>\n'
+        textContacto += f'Carrera 2N #46CN-06, Cali, Valle del Cauca, Colombia\n'
+        textContacto += f'<b>Para mayor informacion comuniquese al:</b>\n'
+        textContacto += f'+57 310 5946667\n'
+        textContacto += f'<b>O escribanos un correo a:</b>\n'
+        textContacto += f'distriromel@outlook.com'
+        
+        msg = bot.send_message(message.chat.id,textContacto, parse_mode="html",reply_markup=markup)
+        bot.register_next_step_handler(msg,realizar_pedido)
+        
     
     if message.text.lower()=="ayuda":
         markup= ReplyKeyboardMarkup(one_time_keyboard=True,
@@ -532,9 +559,7 @@ async def recibePedido():
        
        ######## Datos que se insertaran en la tabla pedidos: ########
     
-       pedidoCompleto = Pedido(identificacion=identificacion,nombres=nombres,
-                               apellidos=apellidos,nombrenegocio=nombrenegocio,direccion=direccion,
-                               ciudad=ciudad,barrio=barrio,correo=correo,celular=celular,fechapedido=fechapedido,
+       pedidoCompleto = Pedido(identificacion=identificacion,fechapedido=fechapedido,
                                fechamaxentrega=fechamaxentrega,totalpagar=totalpagar)
        db.session.add(pedidoCompleto)
        db.session.commit()
@@ -559,11 +584,26 @@ async def recibePedido():
        TextoPedUsuario.textoPedidoUsuario+= f'<b>Fecha pedido: </b>{fechapedido}\n'
        TextoPedUsuario.textoPedidoUsuario+= f'<b>Fecha max entrega: </b>{fechamaxentrega}\n'
        TextoPedUsuario.textoPedidoUsuario+= f'<b>Total a pagar: $</b>{totalpagar}\n'
+       
+       ############ DATOS QUE SE VAN A ENVIAR AL CLIENTE: ############   
+       TextoPedcliente.textoPedidoCliente+= f'<b>• Id pedido: </b>{idpedido}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Identificacion: </b>{identificacion}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Nombres: </b>{nombres}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Apellidos: </b>{apellidos}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Nombre negocio: </b>{nombrenegocio}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Direccion: </b>{direccion}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Ciudad: </b>{ciudad}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Barrio: </b>{barrio}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Correo: </b>{correo}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Celular: </b>{celular}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Fecha pedido: </b>{fechapedido}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Fecha max entrega: </b>{fechamaxentrega}\n'
+       TextoPedcliente.textoPedidoCliente+= f'<b>Total a pagar: $</b>{totalpagar}\n'
     
-       #Calcula maximo id de las ordenes:
-       maxIdOrden = max_id_ordenes()            #para poder incrementar el id en la bd
-       print("max id ordenes:",maxIdOrden)
-       idorden = maxIdOrden + 1
+       #Calcula maximo id de las ordenes/productosxpedido:
+       maxIdproductosxpedido = max_id_productosxpedido()            #para poder incrementar el id en la bd
+       print("max id productosxpedido:",maxIdproductosxpedido)
+       idproductoxpedido = maxIdproductosxpedido + 1
     
        #for para ir agregando cada orden con el mismo numero de pedido:
        j=0
@@ -573,7 +613,7 @@ async def recibePedido():
            ordenfinal={}
            codigoProd = str(codigosproducto[j])
            
-           ordenfinal["idorden"] = idorden
+           ordenfinal["idproductoxpedido"] = idproductoxpedido
            ordenfinal["idpedido"] = idpedido
            ordenfinal["codigo"] = codigoProd
            ordenfinal["descripcion"] = descripciones[j]
@@ -586,30 +626,41 @@ async def recibePedido():
            if(j==0):
                TextoPedUsuario.textoPedidoUsuario += '\n<u><b>------------------</b></u> \n\n'
                TextoPedUsuario.textoPedidoUsuario += '<u><b>Datos de la Orden:</b></u> \n'
+               TextoPedcliente.textoPedidoCliente += '\n<u><b>------------------</b></u> \n\n'
+               TextoPedcliente.textoPedidoCliente += '<u><b>Listado de Productos:</b></u> \n'
            
            if codigoProd in sinStock:
                print("codigoProd:",codigoProd)
                print("sinStock:",sinStock)
                TextoPedUsuario.textoPedidoUsuario+= f'<b>- En el momento no tenemos disponible este producto:</b>\n'
+               TextoPedcliente.textoPedidoCliente+= f'<b>- En el momento no tenemos disponible este producto:</b>\n'
            
-           TextoPedUsuario.textoPedidoUsuario+= f'<b>• Id Orden: </b>{ordenfinal["idorden"]}\n'
+           ####  DATOS PROVEEDOR:  ####
+           TextoPedUsuario.textoPedidoUsuario+= f'<b>• Id Orden: </b>{ordenfinal["idproductoxpedido"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Id Pedido: </b>{ordenfinal["idpedido"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Codigo del producto: </b>{ordenfinal["codigo"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Descripcion del producto: </b>{ordenfinal["descripcion"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Precio: $</b>{ordenfinal["precio"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Cantidad: </b>{ordenfinal["cantidad"]}\n'
            TextoPedUsuario.textoPedidoUsuario+= f'<b>Precio X Cantidad: $</b>{ordenfinal["precioxcantidad"]}\n\n'
+           ####  DATOS CLIENTE:  ####
+           TextoPedcliente.textoPedidoCliente+= f'<b>Codigo del producto: </b>{ordenfinal["codigo"]}\n'
+           TextoPedcliente.textoPedidoCliente+= f'<b>Descripcion del producto: </b>{ordenfinal["descripcion"]}\n'
+           TextoPedcliente.textoPedidoCliente+= f'<b>Precio: $</b>{ordenfinal["precio"]}\n'
+           TextoPedcliente.textoPedidoCliente+= f'<b>Cantidad: </b>{ordenfinal["cantidad"]}\n'
+           TextoPedcliente.textoPedidoCliente+= f'<b>Precio X Cantidad: $</b>{ordenfinal["precioxcantidad"]}\n\n'
+           
 
-           ######## Datos que se insertaran en la tabla ordenes: ########
+           ######## Datos que se insertaran en la tabla productosxpedido: ########
            
-           orden = Orden(idpedido=idpedido,codigo=str(codigosproducto[j]),descripcion=descripciones[j],
-                         precio=precios[j],cantidad=cantidades[j],precioxcantidad=preciosxcantidad[j])
-           db.session.add(orden)
+           prodxped = ProductoxPedido(idpedido=idpedido,codigo=str(codigosproducto[j]),
+                         precio=precios[j],cantidadped=cantidades[j],precioxcantidadped=preciosxcantidad[j])
+           db.session.add(prodxped)
            db.session.commit()
-           print(orden)
-           print("orden agregada")
+           print(prodxped)
+           print("productoxpedido agregado")
            
-           idorden=idorden+1
+           idproductoxpedido=idproductoxpedido+1
            
            j=j+1
            
@@ -621,10 +672,11 @@ async def recibePedido():
                #Se envia mensaje al grupo de Telegram del proveedor con el pedido correspondiente:
                bot.send_message(-860836322, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")
                #Se envia mensaje al cliente con el pedido correspondiente:
-               bot.send_message(msgid, TextoPedUsuario.textoPedidoUsuario,parse_mode="html")
+               bot.send_message(msgid, TextoPedcliente.textoPedidoCliente,parse_mode="html")
                bot.send_message(msgid, "<u><b>Pedido realizado con exito!</b></u>",parse_mode="html")
                #Se reinicia el texto del pedido, para asi poder tomar uno nuevo:
                TextoPedUsuario.textoPedidoUsuario = '<u><b>Datos Pedido:</b></u> \n'
+               TextoPedcliente.textoPedidoCliente = '<u><b>Datos Pedido:</b></u> \n'
     
                
         
@@ -655,9 +707,9 @@ if __name__ == '__main__':
     
     # Blueprints
     web_server.register_blueprint(mainP, url_prefix='/prod')   #productos
-    web_server.register_blueprint(mainO, url_prefix='/ord')   #orden
     web_server.register_blueprint(mainPe, url_prefix='/ped')   #pedido
     web_server.register_blueprint(mainC, url_prefix='/cli')   #clientes
+    web_server.register_blueprint(mainPxP, url_prefix='/pxp')   #productosxpedido
     
     print("INICIANDO BOT...")
     
