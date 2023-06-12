@@ -144,9 +144,9 @@ def realizar_pedido(message):
        
         #videos de ayuda para el cliente:
         textoayuda1 = f'<b>¿Cómo registrarse?: </b>\n'
-        textoayuda1 += f'https://youtu.be/xCOB9ThNJok \n'
+        textoayuda1 += f'https://youtu.be/mYLEWk9o98E \n'
         textoayuda2 = f'<b>¿Cómo realizar un pedido?: </b>\n'
-        textoayuda2 += f'https://youtu.be/wXy3EbPLhzw \n'
+        textoayuda2 += f'https://youtu.be/94ghAtSikfE \n'
         
         msg = bot.send_message(message.chat.id,textoayuda1, parse_mode="html",reply_markup=markup)
         msg = bot.send_message(message.chat.id,textoayuda2, parse_mode="html",reply_markup=markup)
